@@ -17,7 +17,7 @@ import { formatDecimalEur, isValidMoneyInput } from "@/lib/money";
 import { formatDate, formatDateTime, todayIso } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import type { ConsultationResult } from "@/types/domain";
-import type { PersonOption } from "@/server/queries/people";
+import type { CommissionRates, PersonOption } from "@/server/queries/people";
 
 export interface ResultTarget {
   id: string;
@@ -25,7 +25,7 @@ export interface ResultTarget {
   customerName: string;
   scheduledAt: string;
   agentId: string;
-  hasCaller: boolean;
+  callerId: string | null;
   callerName?: string;
 }
 
@@ -56,15 +56,15 @@ export function RecordResultDialog({
   initialResult,
   agents,
   products,
-  agentRatePercent,
+  rates,
   onClose,
 }: {
   target: ResultTarget | null;
   initialResult?: ConsultationResult;
   agents: PersonOption[];
   products: { id: string; name: string }[];
-  /** Rate of the appointment's agent, if visible to the user (for the preview only). */
-  agentRatePercent: string | null;
+  /** Commission settings visible to the user (preview only). */
+  rates: CommissionRates;
   onClose: () => void;
 }) {
   return (
@@ -82,7 +82,8 @@ export function RecordResultDialog({
           initialResult={initialResult}
           agents={agents}
           products={products}
-          agentRatePercent={agentRatePercent}
+          agentRatePercent={rates.agents[target.agentId] ?? null}
+          callerMultiplier={target.callerId ? (rates.callers[target.callerId] ?? null) : null}
           onDone={onClose}
         />
       )}
@@ -96,6 +97,7 @@ function ResultForm({
   agents,
   products,
   agentRatePercent,
+  callerMultiplier,
   onDone,
 }: {
   target: ResultTarget;
@@ -103,6 +105,7 @@ function ResultForm({
   agents: PersonOption[];
   products: { id: string; name: string }[];
   agentRatePercent: string | null;
+  callerMultiplier: string | null;
   onDone: () => void;
 }) {
   const router = useRouter();
@@ -219,7 +222,7 @@ function ResultForm({
               products={products}
               errors={fieldErrors}
               agentRatePercent={agentRatePercent}
-              hasCaller={target.hasCaller}
+              callerMultiplier={callerMultiplier}
               canRemove={policies.length > 1}
               onChange={(patch) => updatePolicy(p.key, patch)}
               onRemove={() => setPolicies((ps) => ps.filter((x) => x.key !== p.key))}
@@ -255,7 +258,7 @@ function PolicyCard({
   products,
   errors,
   agentRatePercent,
-  hasCaller,
+  callerMultiplier,
   canRemove,
   onChange,
   onRemove,
@@ -265,7 +268,8 @@ function PolicyCard({
   products: { id: string; name: string }[];
   errors: Record<string, string>;
   agentRatePercent: string | null;
-  hasCaller: boolean;
+  /** Known only when visible to the user; the server uses the authoritative value. */
+  callerMultiplier: string | null;
   canRemove: boolean;
   onChange: (patch: Partial<PolicyDraft>) => void;
   onRemove: () => void;
@@ -281,12 +285,12 @@ function PolicyCard({
         durationYears: years,
         policyDate: draft.policy_date,
         agentRatePercent,
-        hasCaller,
+        callerMultiplier,
       });
     } catch {
       return null;
     }
-  }, [draft.monthly_premium, draft.duration_years, draft.policy_date, agentRatePercent, hasCaller]);
+  }, [draft.monthly_premium, draft.duration_years, draft.policy_date, agentRatePercent, callerMultiplier]);
 
   return (
     <div className="rounded-lg border border-line p-4">

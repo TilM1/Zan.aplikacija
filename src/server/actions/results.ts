@@ -40,15 +40,23 @@ export async function recordResult(input: unknown): Promise<ActionResult<RecordR
 
     let policies = null;
     if (v.result === "A1") {
+      // Snapshot the CURRENT agent rate and caller multiplier (never retroactive).
       const admin = createAdminClient();
-      const { data: rate, error } = await admin.rpc("current_agent_rate", { p_agent_id: appt.agent_id });
+      const [{ data: rate, error }, callerRes] = await Promise.all([
+        admin.rpc("current_agent_rate", { p_agent_id: appt.agent_id }),
+        appt.caller_id ? admin.rpc("current_caller_multiplier", { p_caller_id: appt.caller_id }) : Promise.resolve({ data: null, error: null }),
+      ]);
       if (error) throw error;
+      if (callerRes.error) throw callerRes.error;
       if (rate === null || rate === undefined) {
         throw new WorkflowError("Zastopnik nima nastavljenega odstotka provizije. Obrnite se na lastnika.");
       }
+      if (appt.caller_id && (callerRes.data === null || callerRes.data === undefined)) {
+        throw new WorkflowError("Klicatelj nima nastavljene provizije. Obrnite se na lastnika.");
+      }
       policies = buildPoliciesPayload(
         v.policies.map((p) => ({ ...p, policy_number: p.policy_number || null, note: p.note || null })),
-        { agentRatePercent: Number(rate).toFixed(2), hasCaller: appt.caller_id !== null },
+        { agentRatePercent: Number(rate).toFixed(2), callerMultiplier: appt.caller_id ? String(Number(callerRes.data)) : null },
       );
     }
 

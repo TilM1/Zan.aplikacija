@@ -15,7 +15,7 @@ import { AppointmentStatusBadge, CustomerStatusBadge, FollowupStatusBadge } from
 import { Timeline } from "@/components/customers/timeline";
 import { CustomerActions } from "@/components/customers/customer-actions";
 import { getCustomerDetail } from "@/server/queries/customers";
-import { getAgents, getPeople, getVisibleAgentRates, nameOf, toOptions } from "@/server/queries/people";
+import { getAgents, getPeople, getVisibleCommissionRates, nameOf, toOptions } from "@/server/queries/people";
 import { getActiveProducts } from "@/server/queries/policies";
 
 export const metadata: Metadata = { title: "Stranka" };
@@ -28,7 +28,7 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
   const sp = await searchParams;
   if (!isUuid(id)) notFound();
 
-  const [detail, people, agents, products, agentRates] = await Promise.all([getCustomerDetail(id), getPeople(), getAgents(), getActiveProducts(), getVisibleAgentRates()]);
+  const [detail, people, agents, products, rates] = await Promise.all([getCustomerDetail(id), getPeople(), getAgents(), getActiveProducts(), getVisibleCommissionRates()]);
   if (!detail) notFound();
   const { customer, appointments, policies, documents, activity, followups, commissions } = detail;
 
@@ -91,7 +91,7 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
                   scheduledAt: openAppt.scheduled_at,
                   durationMinutes: openAppt.duration_minutes,
                   note: openAppt.note,
-                  hasCaller: !!openAppt.caller_id,
+                  callerId: openAppt.caller_id,
                   callerName: openAppt.caller_id ? who(openAppt.caller_id) : undefined,
                   canRecord: isOwner || openAppt.agent_id === profile.id,
                   canEdit: isOwner || openAppt.agent_id === profile.id || (profile.role === "caller" && (openAppt.caller_id === profile.id || openAppt.created_by === profile.id)),
@@ -103,7 +103,7 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
           isOwner={isOwner}
           agents={toOptions(agents)}
           products={products}
-          agentRates={agentRates}
+          rates={rates}
           policies={policies.map((p) => ({ id: p.id, label: `${p.product_name}${p.policy_number ? ` (${p.policy_number})` : ""} – ${formatDate(p.policy_date)}` }))}
           defaultAgentId={appointments[0]?.agent_id ?? customer.current_agent_id}
         />

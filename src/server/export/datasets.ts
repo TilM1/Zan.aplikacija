@@ -82,13 +82,20 @@ export const EXPORT_DATASETS: ExportDataset[] = [
   {
     key: "employees",
     label: "Zaposleni",
-    description: "Zaposleni, vloge, status in trenutni odstotek provizije",
+    description: "Zaposleni, vloge, status ter trenutne provizije z zgodovino sprememb",
     table: "profiles",
-    select: "id, first_name, last_name, email, phone, role, is_active, is_demo, created_at, updated_at, rates:agent_commission_rates!agent_commission_rates_agent_id_fkey(rate_percent, effective_from)",
+    select: "id, first_name, last_name, email, phone, role, is_active, is_demo, created_at, updated_at, rates:agent_commission_rates!agent_commission_rates_agent_id_fkey(rate_percent, effective_from), multipliers:caller_commission_rates!caller_commission_rates_caller_id_fkey(multiplier, effective_from)",
     order: "created_at",
-    flatten: ({ rates, ...r }) => {
+    flatten: ({ rates, multipliers, ...r }) => {
       const list = ((rates ?? []) as { rate_percent: number; effective_from: string }[]).sort((a, b) => b.effective_from.localeCompare(a.effective_from));
-      return { ...r, current_rate_percent: list[0]?.rate_percent ?? "", rate_history: list.map((x) => `${x.effective_from.slice(0, 10)}:${x.rate_percent}`).join(" | ") };
+      const mult = ((multipliers ?? []) as { multiplier: number; effective_from: string }[]).sort((a, b) => b.effective_from.localeCompare(a.effective_from));
+      return {
+        ...r,
+        current_rate_percent: list[0]?.rate_percent ?? "",
+        rate_history: list.map((x) => `${x.effective_from.slice(0, 10)}:${x.rate_percent}`).join(" | "),
+        current_caller_multiplier: mult[0]?.multiplier ?? "",
+        caller_multiplier_history: mult.map((x) => `${x.effective_from.slice(0, 10)}:${x.multiplier}`).join(" | "),
+      };
     },
   },
   {

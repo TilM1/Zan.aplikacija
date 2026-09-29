@@ -46,6 +46,14 @@ describe("demo seed", () => {
     expect(rows.at(-1)!.rate).toBe("12.00");
   });
 
+  it("snapshots Petra's old ×1.5 and new ×2 caller multiplier", async () => {
+    const rows = await db.query<{ m: string }>(
+      `select c.caller_multiplier::text m from commissions c join profiles p on p.id = c.beneficiary_id where p.first_name = 'Petra' order by c.policy_date`,
+    );
+    expect(rows[0].m).toBe("1.500");
+    expect(rows.at(-1)!.m).toBe("2.000");
+  });
+
   it("demo customer statuses are consistent with their appointments", async () => {
     const bad = await db.query(`select c.first_name from customers c where is_demo and (
       (status = 'scheduled') <> exists (select 1 from appointments a where a.customer_id = c.id and a.status = 'scheduled'))`);

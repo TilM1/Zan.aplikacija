@@ -11,12 +11,12 @@ export const metadata: Metadata = { title: "Profil" };
 
 export default async function ProfilePage() {
   const { profile } = await requireSession();
-  let rate: string | null = null;
-  if (profile.role !== "caller") {
-    const supabase = await createClient();
-    const { data } = await supabase.from("agent_commission_rates").select("rate_percent").eq("agent_id", profile.id).order("effective_from", { ascending: false }).limit(1).maybeSingle();
-    rate = data ? `${Number(data.rate_percent).toLocaleString("sl-SI")} %` : "ni nastavljeno";
-  }
+  const supabase = await createClient();
+  const { data } =
+    profile.role === "caller"
+      ? await supabase.from("caller_commission_rates").select("value:multiplier").eq("caller_id", profile.id).order("effective_from", { ascending: false }).limit(1).maybeSingle()
+      : await supabase.from("agent_commission_rates").select("value:rate_percent").eq("agent_id", profile.id).order("effective_from", { ascending: false }).limit(1).maybeSingle();
+  const rate = !data ? "ni nastavljeno" : profile.role === "caller" ? `× ${Number(data.value).toLocaleString("sl-SI")} mesečne premije` : `${Number(data.value).toLocaleString("sl-SI")} %`;
   return (
     <>
       <PageHeader title="Profil" />
@@ -28,7 +28,7 @@ export default async function ProfilePage() {
               items={[
                 { label: "E-pošta (prijava)", value: profile.email },
                 { label: "Vloga", value: ROLE_LABELS[profile.role] },
-                ...(rate ? [{ label: "Trenutni odstotek provizije", value: rate }] : []),
+                { label: "Trenutna provizija", value: rate },
                 { label: "Račun ustvarjen", value: formatDate(profile.created_at) },
               ]}
             />

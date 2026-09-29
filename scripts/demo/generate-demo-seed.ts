@@ -64,9 +64,12 @@ export function generateDemoSeed(today = todayIso()): string {
     { from: d(-60), rate: "12.00" }, // raise → only newer policies use 12 %
   ]);
   const nina = mk("Nina", "Zupan", "agent", [{ from: d(-400), rate: "11.50" }]);
-  const ana = mk("Ana", "Novak", "caller");
-  const petra = mk("Petra", "Krajnc", "caller");
-  const jure = mk("Jure", "Golob", "caller");
+  const ana = mk("Ana", "Novak", "caller", [{ from: d(-900), rate: "1.5" }]);
+  const petra = mk("Petra", "Krajnc", "caller", [
+    { from: d(-900), rate: "1.5" },
+    { from: d(-10), rate: "2" }, // raise → only policies saved after it use ×2
+  ]);
+  const jure = mk("Jure", "Golob", "caller", [{ from: d(-900), rate: "1.5" }]);
   const users = [owner, marko, luka, nina, ana, petra, jure];
 
   const rateAt = (u: DemoUser, date: string) => [...(u.rates ?? [])].filter((r) => r.from <= date).sort((a, b) => b.from.localeCompare(a.from))[0].rate;
@@ -86,9 +89,15 @@ values ('00000000-0000-0000-0000-000000000000', ${lit(u.id)}, 'authenticated', '
 values (${lit(randomUUID())}, ${lit(u.id)}, ${lit(u.id)}, ${lit({ sub: u.id, email: u.email, email_verified: true })}, 'email', now(), now(), now());`);
     sql(`insert into public.profiles (id, first_name, last_name, email, phone, role, is_demo, created_at) values (${lit(u.id)}, ${lit(u.first)}, ${lit(u.last)}, ${lit(u.email)}, ${lit("+386 40 000 " + String(users.indexOf(u) + 100))}, ${lit(u.role)}, true, ${lit(at(-900, "08:00"))});`);
     for (const r of u.rates ?? []) {
-      sql(`insert into public.agent_commission_rates (agent_id, rate_percent, effective_from, set_by, created_at) values (${lit(u.id)}, ${r.rate}, ${lit(localDateTimeToIso(r.from, "08:00"))}, ${lit(owner.id)}, ${lit(localDateTimeToIso(r.from, "08:00"))});`);
+      const at8 = lit(localDateTimeToIso(r.from, "08:00"));
+      if (u.role === "caller") {
+        sql(`insert into public.caller_commission_rates (caller_id, multiplier, effective_from, set_by, created_at) values (${lit(u.id)}, ${r.rate}, ${at8}, ${lit(owner.id)}, ${at8});`);
+      } else {
+        sql(`insert into public.agent_commission_rates (agent_id, rate_percent, effective_from, set_by, created_at) values (${lit(u.id)}, ${r.rate}, ${at8}, ${lit(owner.id)}, ${at8});`);
+      }
       if (r !== u.rates![0]) {
-        sql(`insert into public.activity_log (entity_type, entity_id, action, actor_id, visibility, old_value, new_value, created_at) values ('profile', ${lit(u.id)}, 'agent_rate_changed', ${lit(owner.id)}, 'owner', ${lit({ rate_percent: u.rates![0].rate })}, ${lit({ rate_percent: r.rate })}, ${lit(localDateTimeToIso(r.from, "08:00"))});`);
+        const [action, key] = u.role === "caller" ? ["caller_multiplier_changed", "multiplier"] : ["agent_rate_changed", "rate_percent"];
+        sql(`insert into public.activity_log (entity_type, entity_id, action, actor_id, visibility, old_value, new_value, created_at) values ('profile', ${lit(u.id)}, ${lit(action)}, ${lit(owner.id)}, 'owner', ${lit({ [key]: u.rates![0].rate })}, ${lit({ [key]: r.rate })}, ${at8});`);
       }
     }
   }
@@ -188,7 +197,7 @@ values (${lit(apptId)}, ${lit(customerId)}, ${lit(step.agent.id)}, ${lit(caller?
           status = "won";
           const policyDate = d(step.day);
           const entries: PolicyEntry[] = step.policies!.map((p) => ({ product_id: p.product, monthly_premium: p.premium, duration_years: p.years, policy_date: policyDate, policy_number: p.number ?? null }));
-          const payload = buildPoliciesPayload(entries, { agentRatePercent: rateAt(step.agent, policyDate), hasCaller: !!caller });
+          const payload = buildPoliciesPayload(entries, { agentRatePercent: rateAt(step.agent, policyDate), callerMultiplier: caller ? rateAt(caller, policyDate) : null });
           payload.forEach((p, pi) => {
             const policyId = randomUUID();
             const key = step.policies![pi].product;

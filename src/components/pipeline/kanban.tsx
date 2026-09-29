@@ -9,7 +9,7 @@ import { RESULT_LABELS } from "@/lib/labels";
 import { formatDate, formatTime, formatWeekday } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import type { ConsultationResult } from "@/types/domain";
-import type { PersonOption } from "@/server/queries/people";
+import type { CommissionRates, PersonOption } from "@/server/queries/people";
 import type { PipelineCard } from "./types";
 
 type ColumnKey = "upcoming" | "pending" | ConsultationResult;
@@ -27,13 +27,13 @@ export function KanbanBoard({
   cards,
   agents,
   products,
-  agentRates,
+  rates,
   now,
 }: {
   cards: PipelineCard[];
   agents: PersonOption[];
   products: { id: string; name: string }[];
-  agentRates: Record<string, string>;
+  rates: CommissionRates;
   now: string;
 }) {
   const [target, setTarget] = useState<{ card: PipelineCard; result?: ConsultationResult } | null>(null);
@@ -59,7 +59,7 @@ export function KanbanBoard({
     customerName: c.customerName,
     scheduledAt: c.scheduledAt,
     agentId: c.agentId,
-    hasCaller: c.hasCaller,
+    callerId: c.callerId,
     callerName: c.callerName ?? undefined,
   });
 
@@ -126,7 +126,7 @@ export function KanbanBoard({
         initialResult={target?.result}
         agents={agents}
         products={products}
-        agentRatePercent={target ? (agentRates[target.card.agentId] ?? null) : null}
+        rates={rates}
         onClose={() => setTarget(null)}
       />
       <EditAppointmentDialog

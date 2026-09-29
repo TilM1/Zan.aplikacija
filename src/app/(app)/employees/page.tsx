@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/misc";
 import { Table, TD, TH, THead, TR } from "@/components/ui/table";
 import { CreateEmployeeButton } from "@/components/employees/employee-forms";
-import { getPeople, getVisibleAgentRates } from "@/server/queries/people";
+import { getPeople, getVisibleCommissionRates } from "@/server/queries/people";
 import { currentMonthRange, policyProduction } from "@/server/queries/metrics";
 
 export const metadata: Metadata = { title: "Zaposleni" };
@@ -17,12 +17,12 @@ export const metadata: Metadata = { title: "Zaposleni" };
 export default async function EmployeesPage() {
   await requireSession(["owner"]);
   const m = currentMonthRange();
-  const [people, rates, prod] = await Promise.all([getPeople(), getVisibleAgentRates(), policyProduction(m.from, m.to)]);
+  const [people, rates, prod] = await Promise.all([getPeople(), getVisibleCommissionRates(), policyProduction(m.from, m.to)]);
   const list = [...people.values()].sort((a, b) => Number(b.is_active) - Number(a.is_active) || a.role.localeCompare(b.role) || a.first_name.localeCompare(b.first_name));
 
   return (
     <>
-      <PageHeader title="Zaposleni" description="Računi, vloge, odstotki provizij in dostop" actions={<CreateEmployeeButton />} />
+      <PageHeader title="Zaposleni" description="Računi, vloge in dostop. Provizijo spremenite s klikom na vrednost v stolpcu »Provizija«." actions={<CreateEmployeeButton />} />
       <Card>
         <Table>
           <THead>
@@ -54,7 +54,13 @@ export default async function EmployeesPage() {
                   </TD>
                   <TD className="text-ink-2">{p.email}</TD>
                   <TD className="text-ink-2">{p.phone ?? "–"}</TD>
-                  <TD className="text-right tabular">{p.role === "caller" ? "× 1,5" : rates[p.id] ? `${Number(rates[p.id]).toLocaleString("sl-SI")} %` : <span className="text-warning">ni nastavljeno</span>}</TD>
+                  <TD className="text-right tabular">
+                    <Link href={`/employees/${p.id}#provizija`} className="hover:text-brand hover:underline" title="Spremeni provizijo">
+                      {p.role === "caller"
+                        ? rates.callers[p.id] ? `× ${Number(rates.callers[p.id]).toLocaleString("sl-SI")}` : <span className="text-warning">ni nastavljeno</span>
+                        : rates.agents[p.id] ? `${Number(rates.agents[p.id]).toLocaleString("sl-SI")} %` : <span className="text-warning">ni nastavljeno</span>}
+                    </Link>
+                  </TD>
                   <TD className="text-right tabular">{agg?.count ?? 0}</TD>
                   <TD className="text-right tabular">{formatEur(agg?.premiumCents ?? 0)}</TD>
                   <TD>{p.is_active ? <Badge tone="success">Aktiven</Badge> : <Badge>Neaktiven</Badge>}</TD>

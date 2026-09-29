@@ -12,7 +12,7 @@ import { ViewSwitch } from "@/components/pipeline/view-switch";
 import { AppointmentsTable } from "@/components/appointments/appointments-table";
 import { toPipelineCard } from "@/components/pipeline/to-card";
 import { getPipeline, listAppointments, resolveAgentScope } from "@/server/queries/appointments";
-import { getAgents, getCallers, getPeople, getVisibleAgentRates, toOptions } from "@/server/queries/people";
+import { getAgents, getCallers, getPeople, getVisibleCommissionRates, toOptions } from "@/server/queries/people";
 import { getActiveProducts } from "@/server/queries/policies";
 import Link from "next/link";
 
@@ -26,9 +26,9 @@ export default async function PipelinePage({ searchParams }: PageProps<"/pipelin
   const view = param(sp, "view") === "table" ? "table" : "kanban";
   const isOwner = profile.role === "owner";
 
-  const [people, agents, callers, products, agentRates] = await Promise.all([getPeople(), getAgents(), getCallers(), getActiveProducts(), getVisibleAgentRates()]);
+  const [people, agents, callers, products, rates] = await Promise.all([getPeople(), getAgents(), getCallers(), getActiveProducts(), getVisibleCommissionRates()]);
   const agentOptions = toOptions(agents);
-  const actionsProps = { agents: agentOptions, products, agentRates };
+  const actionsProps = { agents: agentOptions, products, rates };
 
   const agentFilterOptions = [
     { value: "", label: "Moji termini" },
@@ -61,7 +61,7 @@ export default async function PipelinePage({ searchParams }: PageProps<"/pipelin
       <>
         {header}
         {isOwner && <FilterBar className="mb-4" filters={[{ key: "agent", label: "Zastopnik", type: "select", options: agentFilterOptions }]} />}
-        <KanbanBoard cards={cards} agents={agentOptions} products={products} agentRates={agentRates} now={new Date().toISOString()} />
+        <KanbanBoard cards={cards} agents={agentOptions} products={products} rates={rates} now={new Date().toISOString()} />
       </>
     );
   }

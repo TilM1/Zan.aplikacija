@@ -21,7 +21,7 @@ export interface PolicyPayload extends PolicyEntry {
 
 export function buildPoliciesPayload(
   entries: PolicyEntry[],
-  ctx: { agentRatePercent: string; hasCaller: boolean },
+  ctx: { agentRatePercent: string; callerMultiplier: string | null },
 ): PolicyPayload[] {
   return entries.map((entry) => {
     const plan = buildPolicyCommissions({
@@ -29,7 +29,7 @@ export function buildPoliciesPayload(
       durationYears: entry.duration_years,
       policyDate: entry.policy_date,
       agentRatePercent: ctx.agentRatePercent,
-      hasCaller: ctx.hasCaller,
+      callerMultiplier: ctx.callerMultiplier,
     });
     return { ...entry, agent_commission: plan.agent, caller_commission: plan.caller };
   });

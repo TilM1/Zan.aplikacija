@@ -83,6 +83,7 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   employee_created: "Zaposleni dodan",
   employee_updated: "Zaposleni posodobljen",
   agent_rate_changed: "Odstotek provizije spremenjen",
+  caller_multiplier_changed: "Provizija klicatelja spremenjena",
   product_saved: "Produkt shranjen",
 };
 

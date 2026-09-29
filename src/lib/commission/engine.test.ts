@@ -55,15 +55,24 @@ describe("agent commission", () => {
 
 describe("caller commission", () => {
   it("100 € × 1.5 = 150 €, paid in full once", () => {
-    expect(callerCommissionTotal(toCents("100"))).toBe(15000);
-    const plan = buildCallerCommission({ monthlyPremium: "100", policyDate: "2026-10-23" });
+    expect(callerCommissionTotal(toCents("100"), 1500)).toBe(15000);
+    const plan = buildCallerCommission({ monthlyPremium: "100", policyDate: "2026-10-23", callerMultiplier: "1.5" });
     expect(plan.total_amount).toBe("150.00");
     expect(plan.installments).toHaveLength(1);
     expect(plan.installments[0]).toMatchObject({ amount: "150.00", share_percent: "100.00", due_date: "2026-11-16" });
   });
 
   it("rounds half-up (33.33 × 1.5 = 49.995 → 50.00)", () => {
-    expect(centsToDecimal(callerCommissionTotal(toCents("33.33")))).toBe("50.00");
+    expect(centsToDecimal(callerCommissionTotal(toCents("33.33"), 1500))).toBe("50.00");
+  });
+
+  it("uses the caller's own multiplier (e.g. ×2 or ×1.75)", () => {
+    expect(buildCallerCommission({ monthlyPremium: "100", policyDate: "2026-10-23", callerMultiplier: "2" }).total_amount).toBe("200.00");
+    const p = buildCallerCommission({ monthlyPremium: "80", policyDate: "2026-10-23", callerMultiplier: "1,75" });
+    expect(p.total_amount).toBe("140.00");
+    expect(p.caller_multiplier).toBe("1.75");
+    expect(p.calculation.expression).toBe("80.00 × 1.75");
+    expect(() => buildCallerCommission({ monthlyPremium: "80", policyDate: "2026-10-23", callerMultiplier: "-1" })).toThrow();
   });
 });
 
@@ -93,7 +102,7 @@ describe("payout cutoff (24th) → 16th", () => {
 
   it("caller payout date equals the agent's first payout date", () => {
     for (const d of ["2026-10-23", "2026-10-24", "2026-10-25"]) {
-      const plan = buildPolicyCommissions({ monthlyPremium: "100", durationYears: 10, policyDate: d, agentRatePercent: "10", hasCaller: true });
+      const plan = buildPolicyCommissions({ monthlyPremium: "100", durationYears: 10, policyDate: d, agentRatePercent: "10", callerMultiplier: "1.5" });
       expect(plan.caller!.installments[0].due_date).toBe(plan.agent.installments[0].due_date);
     }
   });
@@ -110,14 +119,14 @@ describe("multiple policies from one consultation", () => {
       { monthlyPremium: "100", durationYears: 10 },
       { monthlyPremium: "50", durationYears: 20 },
       { monthlyPremium: "35.50", durationYears: 15 },
-    ].map((p) => buildPolicyCommissions({ ...p, policyDate: "2026-10-23", agentRatePercent: "10", hasCaller: true }));
+    ].map((p) => buildPolicyCommissions({ ...p, policyDate: "2026-10-23", agentRatePercent: "10", callerMultiplier: "1.5" }));
 
     expect(policies.map((p) => p.agent.total_amount)).toEqual(["1200.00", "1200.00", "639.00"]);
     expect(policies.map((p) => p.caller!.total_amount)).toEqual(["150.00", "75.00", "53.25"]);
   });
 
   it("omits caller commission when the appointment has no caller", () => {
-    const plan = buildPolicyCommissions({ monthlyPremium: "100", durationYears: 10, policyDate: "2026-10-23", agentRatePercent: "10", hasCaller: false });
+    const plan = buildPolicyCommissions({ monthlyPremium: "100", durationYears: 10, policyDate: "2026-10-23", agentRatePercent: "10", callerMultiplier: null });
     expect(plan.caller).toBeNull();
   });
 });

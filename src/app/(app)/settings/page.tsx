@@ -28,9 +28,10 @@ export default async function SettingsPage() {
               items={[
                 { label: "Provizija zastopnika", value: "mesečna premija × 12 × trajanje (leta) × odstotek zastopnika ob prodaji" },
                 { label: "Obroki zastopnika", value: r.agentInstallments.map((i) => `${i.number}. obrok ${i.sharePercent} % (+${i.monthsAfterFirstPayout} mes. od 1. izplačila)`).join(" · ") },
-                { label: "Provizija klicatelja", value: `mesečna premija × ${r.callerMultiplier.display}, enkratno, skupaj s 1. obrokom zastopnika` },
+                { label: "Provizija klicatelja", value: `mesečna premija × faktor klicatelja ob prodaji (privzeto ${r.defaultCallerMultiplier.replace(".", ",")}; nastavi se pri zaposlenem), enkratno, skupaj s 1. obrokom zastopnika` },
+                { label: "Sprememba provizije", value: "Odstotek zastopnika in faktor klicatelja spremenite v Zaposleni → oseba → Provizija. Nova vrednost velja za police, shranjene od spremembe naprej." },
                 { label: "Presečni dan / dan izplačila", value: `Police do vključno ${r.cutoffDay}. v mesecu → izplačilo ${r.payoutDay}. naslednjega meseca; kasnejše → ${r.payoutDay}. čez dva meseca` },
-                { label: "Posnetki (snapshot)", value: "Odstotek, premija, trajanje in pravila se ob sklenitvi shranijo k proviziji. Kasnejše spremembe ne vplivajo na obstoječe provizije." },
+                { label: "Posnetki (snapshot)", value: "Odstotek/faktor, premija, trajanje in pravila se ob sklenitvi shranijo k proviziji. Kasnejše spremembe ne vplivajo na obstoječe provizije." },
               ]}
             />
           </CardBody>

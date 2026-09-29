@@ -71,3 +71,20 @@ export function formatDecimalEur(value: string | number | null | undefined): str
 export function sumDecimals(values: Array<string | number | null | undefined>): Cents {
   return values.reduce<number>((acc, v) => (v === null || v === undefined || v === "" ? acc : acc + toCents(String(v))), 0);
 }
+
+/** Multiplier with up to 3 decimals ("1.5", "2,25") → thousandths (1500, 2250). */
+export function multiplierToThousandths(value: string | number): number {
+  const raw = typeof value === "number" ? String(value) : value.trim().replace(",", ".");
+  if (!/^\d{1,3}(\.\d{1,3})?$/.test(raw)) throw new Error(`Invalid multiplier: ${value}`);
+  const [whole, frac = ""] = raw.split(".");
+  const result = Number(whole) * 1000 + Number(frac.padEnd(3, "0"));
+  if (result > 100000) throw new Error(`Multiplier above 100: ${value}`);
+  return result;
+}
+
+/** 1500 → "1.5", 2250 → "2.25", 2000 → "2" */
+export function thousandthsToMultiplier(t: number): string {
+  const whole = Math.floor(t / 1000);
+  const frac = String(t % 1000).padStart(3, "0").replace(/0+$/, "");
+  return frac ? `${whole}.${frac}` : String(whole);
+}

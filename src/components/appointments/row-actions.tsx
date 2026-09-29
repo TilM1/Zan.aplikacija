@@ -5,18 +5,18 @@ import { Ban, Pencil } from "lucide-react";
 import { RecordResultDialog } from "./record-result-dialog";
 import { CancelAppointmentDialog, EditAppointmentDialog } from "./appointment-dialogs";
 import type { PipelineCard } from "@/components/pipeline/types";
-import type { PersonOption } from "@/server/queries/people";
+import type { CommissionRates, PersonOption } from "@/server/queries/people";
 
 export function AppointmentRowActions({
   card,
   agents,
   products,
-  agentRates,
+  rates,
 }: {
   card: PipelineCard;
   agents: PersonOption[];
   products: { id: string; name: string }[];
-  agentRates: Record<string, string>;
+  rates: CommissionRates;
 }) {
   const [mode, setMode] = useState<"result" | "edit" | "cancel" | null>(null);
   if (!card.canRecord && !card.canEdit) return null;
@@ -38,10 +38,10 @@ export function AppointmentRowActions({
         </>
       )}
       <RecordResultDialog
-        target={mode === "result" ? { id: card.id, customerId: card.customerId, customerName: card.customerName, scheduledAt: card.scheduledAt, agentId: card.agentId, hasCaller: card.hasCaller, callerName: card.callerName ?? undefined } : null}
+        target={mode === "result" ? { id: card.id, customerId: card.customerId, customerName: card.customerName, scheduledAt: card.scheduledAt, agentId: card.agentId, callerId: card.callerId, callerName: card.callerName ?? undefined } : null}
         agents={agents}
         products={products}
-        agentRatePercent={agentRates[card.agentId] ?? null}
+        rates={rates}
         onClose={() => setMode(null)}
       />
       <EditAppointmentDialog

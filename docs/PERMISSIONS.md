@@ -19,6 +19,7 @@ Enforcement layers:
 | Policy documents (PDF) | all | uploaded by them, their policies, or customers they can see | – |
 | Commissions / installments (payroll) | all | **own only** | **own only** |
 | Agent commission rates | all | own only | – |
+| Caller commission multipliers | all | – | own only |
 | Activity timeline | all | team events of visible customers (financial events hidden) | same |
 | Products | all | all | all |
 | Export / backup | ✔ | – | – |
@@ -37,7 +38,7 @@ Enforcement layers:
 | Archive / restore customer | ✔ | – | – |
 | Upload policy document | ✔ | visible customers | – |
 | Mark payouts paid | ✔ | – | – |
-| Create/edit/deactivate employees, set rates, reset passwords | ✔ | – | – |
+| Create/edit/deactivate employees, set agent rates and caller multipliers, reset passwords | ✔ | – | – |
 | Manage products | ✔ | – | – |
 | Reports, payroll overview, export | ✔ | own production/earnings | own production/earnings |
 

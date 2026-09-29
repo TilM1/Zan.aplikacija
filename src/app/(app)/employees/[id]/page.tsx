@@ -37,7 +37,9 @@ export default async function EmployeePage({ params }: PageProps<"/employees/[id
   const today = todayIso();
   const supabase = await createClient();
   const [rates, prodMonth, prodTrend, results, installments, upcoming] = await Promise.all([
-    supabase.from("agent_commission_rates").select("*").eq("agent_id", id).order("effective_from", { ascending: false }),
+    isCaller
+      ? supabase.from("caller_commission_rates").select("id, value:multiplier, effective_from, set_by").eq("caller_id", id).order("effective_from", { ascending: false }).order("created_at", { ascending: false })
+      : supabase.from("agent_commission_rates").select("id, value:rate_percent, effective_from, set_by").eq("agent_id", id).order("effective_from", { ascending: false }).order("created_at", { ascending: false }),
     policyProduction(m.from, m.to, scope),
     policyProduction(trend.from, trend.to, scope),
     resultBreakdown(m.from, m.toExclusive, scope),
@@ -50,7 +52,8 @@ export default async function EmployeePage({ params }: PageProps<"/employees/[id
       .order("scheduled_at")
       .limit(10),
   ]);
-  const rateRows = (rates.data ?? []) as { id: string; rate_percent: number; effective_from: string; set_by: string | null }[];
+  const rateRows = (rates.data ?? []) as { id: string; value: number; effective_from: string; set_by: string | null }[];
+  const fmtRate = (v: number) => (isCaller ? `× ${Number(v).toLocaleString("sl-SI")}` : `${Number(v).toLocaleString("sl-SI")} %`);
   const s = summarize(installments, today);
   const paidTotal = sumDecimals(installments.filter((i) => i.status === "paid").map((i) => i.amount));
   const upcomingRows = (upcoming.data ?? []) as unknown as { id: string; scheduled_at: string; customer: { id: string; first_name: string; last_name: string } }[];
@@ -87,36 +90,37 @@ export default async function EmployeePage({ params }: PageProps<"/employees/[id
           <AggTable title="Produkcija – zadnjih 12 mesecev" keyLabel="Mesec" rows={monthRows(prodTrend.byMonth)} />
         </div>
         <div className="flex flex-col gap-4">
-          {!isCaller && (
-            <Card>
-              <CardHeader title="Odstotek provizije" description="Zgodovina sprememb" />
-              <CardBody className="flex flex-col gap-4">
-                <RateForm agentId={id} current={rateRows[0] ? String(rateRows[0].rate_percent) : null} />
-                {rateRows.length > 0 && (
-                  <Table>
-                    <THead>
-                      <tr>
-                        <TH>Velja od</TH>
-                        <TH className="text-right">Odstotek</TH>
-                        <TH>Nastavil</TH>
-                      </tr>
-                    </THead>
-                    <tbody>
-                      {rateRows.map((r, i) => (
-                        <TR key={r.id}>
-                          <TD className="tabular">
-                            {formatDateTime(r.effective_from)} {i === 0 && <Badge tone="success">trenutno</Badge>}
-                          </TD>
-                          <TD className="text-right tabular">{Number(r.rate_percent).toLocaleString("sl-SI")} %</TD>
-                          <TD className="text-ink-2">{nameOf(people, r.set_by)}</TD>
-                        </TR>
-                      ))}
-                    </tbody>
-                  </Table>
-                )}
-              </CardBody>
-            </Card>
-          )}
+          <Card id="provizija">
+            <CardHeader
+              title={isCaller ? "Provizija klicatelja" : "Odstotek provizije"}
+              description={isCaller ? "Enkratno na polico: mesečna premija × faktor" : "Premija × 12 × leta × odstotek, izplačilo 55 / 20 / 25 %"}
+            />
+            <CardBody className="flex flex-col gap-4">
+              <RateForm employeeId={id} kind={isCaller ? "caller" : "agent"} current={rateRows[0] ? String(Number(rateRows[0].value)) : null} />
+              {rateRows.length > 0 && (
+                <Table>
+                  <THead>
+                    <tr>
+                      <TH>Velja od</TH>
+                      <TH className="text-right">{isCaller ? "Faktor" : "Odstotek"}</TH>
+                      <TH>Nastavil</TH>
+                    </tr>
+                  </THead>
+                  <tbody>
+                    {rateRows.map((r, i) => (
+                      <TR key={r.id}>
+                        <TD className="tabular">
+                          {formatDateTime(r.effective_from)} {i === 0 && <Badge tone="success">trenutno</Badge>}
+                        </TD>
+                        <TD className="text-right tabular">{fmtRate(r.value)}</TD>
+                        <TD className="text-ink-2">{r.set_by ? nameOf(people, r.set_by) : "sistem"}</TD>
+                      </TR>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
+            </CardBody>
+          </Card>
           <Card>
             <CardHeader title="Odprti termini" />
             {upcomingRows.length === 0 ? (

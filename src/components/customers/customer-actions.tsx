@@ -12,7 +12,7 @@ import { RecordResultDialog } from "@/components/appointments/record-result-dial
 import { ScheduleAppointmentDialog, EditAppointmentDialog } from "@/components/appointments/appointment-dialogs";
 import { addCustomerNote, setCustomerArchived, updateCustomer } from "@/server/actions/customers";
 import { toast } from "sonner";
-import type { PersonOption } from "@/server/queries/people";
+import type { CommissionRates, PersonOption } from "@/server/queries/people";
 import type { Customer } from "@/types/domain";
 
 export interface OpenAppointmentInfo {
@@ -21,7 +21,7 @@ export interface OpenAppointmentInfo {
   scheduledAt: string;
   durationMinutes: number;
   note: string | null;
-  hasCaller: boolean;
+  callerId: string | null;
   callerName?: string;
   canRecord: boolean;
   canEdit: boolean;
@@ -35,7 +35,7 @@ export function CustomerActions({
   isOwner,
   agents,
   products,
-  agentRates,
+  rates,
   policies,
   defaultAgentId,
 }: {
@@ -46,7 +46,7 @@ export function CustomerActions({
   isOwner: boolean;
   agents: PersonOption[];
   products: { id: string; name: string }[];
-  agentRates: Record<string, string>;
+  rates: CommissionRates;
   policies: { id: string; label: string }[];
   defaultAgentId: string | null;
 }) {
@@ -91,10 +91,10 @@ export function CustomerActions({
 
       {open && (
         <RecordResultDialog
-          target={mode === "result" ? { id: open.id, customerId: customer.id, customerName: name, scheduledAt: open.scheduledAt, agentId: open.agentId, hasCaller: open.hasCaller, callerName: open.callerName } : null}
+          target={mode === "result" ? { id: open.id, customerId: customer.id, customerName: name, scheduledAt: open.scheduledAt, agentId: open.agentId, callerId: open.callerId, callerName: open.callerName } : null}
           agents={agents}
           products={products}
-          agentRatePercent={agentRates[open.agentId] ?? null}
+          rates={rates}
           onClose={close}
         />
       )}

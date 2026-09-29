@@ -17,7 +17,7 @@ export interface PipelineCard {
   agentId: string;
   agentName: string;
   callerName: string | null;
-  hasCaller: boolean;
+  callerId: string | null;
   note: string | null;
   canRecord: boolean;
   canEdit: boolean;

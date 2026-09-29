@@ -24,6 +24,10 @@ async function createAppointment(actor: string, agentId: string, name = "Janez")
   });
 }
 
+async function callerRate(callerId: string) {
+  return String(Number((await db.one<{ r: string }>(`select public.current_caller_multiplier($1)::text as r`, [callerId])).r));
+}
+
 async function rate(agentId: string) {
   return (await db.one<{ r: string }>(`select public.current_agent_rate($1)::text as r`, [agentId])).r;
 }
@@ -33,7 +37,7 @@ async function recordA1(actor: string, appointmentId: string, entries: Parameter
     `select agent_id, caller_id from appointments where id = $1`,
     [appointmentId],
   );
-  const payload = buildPoliciesPayload(entries, { agentRatePercent: await rate(appt.agent_id), hasCaller: !!appt.caller_id });
+  const payload = buildPoliciesPayload(entries, { agentRatePercent: await rate(appt.agent_id), callerMultiplier: appt.caller_id ? await callerRate(appt.caller_id) : null });
   return db.rpc<{ policy_ids: string[] }>("crm_record_result", {
     p_actor: actor,
     p_appointment_id: appointmentId,
@@ -234,7 +238,7 @@ describe("result A1 — policies and commissions", () => {
     const { appointment_id } = await createAppointment(callerAna, agentMarko, "Tamper");
     const payload = buildPoliciesPayload(
       [{ product_id: productIds[0], monthly_premium: "100.00", duration_years: 10, policy_date: "2026-10-23" }],
-      { agentRatePercent: "10.00", hasCaller: true },
+      { agentRatePercent: "10.00", callerMultiplier: "1.5" },
     );
     payload[0].agent_commission.total_amount = "9999.00";
     await expect(
@@ -243,7 +247,7 @@ describe("result A1 — policies and commissions", () => {
 
     const stale = buildPoliciesPayload(
       [{ product_id: productIds[0], monthly_premium: "100.00", duration_years: 10, policy_date: "2026-10-23" }],
-      { agentRatePercent: "25.00", hasCaller: true },
+      { agentRatePercent: "25.00", callerMultiplier: "1.5" },
     );
     await expect(
       db.rpc("crm_record_result", { p_actor: agentMarko, p_appointment_id: appointment_id, p_result: "A1", p_note: null, p_next: null, p_policies: stale }),
@@ -281,6 +285,49 @@ describe("result A1 — policies and commissions", () => {
     const res = await recordA1(agentMarko, appointment_id, [{ product_id: productIds[0], monthly_premium: "80.00", duration_years: 5, policy_date: "2026-10-10" }]);
     const types = await db.query<{ beneficiary_type: string }>(`select beneficiary_type from commissions where policy_id = $1`, [res.policy_ids[0]]);
     expect(types.map((t) => t.beneficiary_type)).toEqual(["agent"]);
+  });
+});
+
+describe("caller multiplier", () => {
+  it("changing a caller's multiplier never changes existing policies", async () => {
+    const { appointment_id: first } = await createAppointment(callerBor, agentMarko, "CallerSnap1");
+    const r1 = await recordA1(agentMarko, first, [{ product_id: productIds[0], monthly_premium: "100.00", duration_years: 10, policy_date: "2026-10-05" }]);
+
+    await db.rpc("crm_set_caller_multiplier", { p_actor: owner, p_caller_id: callerBor, p_multiplier: 2 });
+    const { appointment_id: second } = await createAppointment(callerBor, agentMarko, "CallerSnap2");
+    const r2 = await recordA1(agentMarko, second, [{ product_id: productIds[0], monthly_premium: "100.00", duration_years: 10, policy_date: "2026-10-06" }]);
+
+    const rows = await db.query<{ policy_id: string; m: string; total: string }>(
+      `select policy_id, caller_multiplier::text m, total_amount::text total from commissions where beneficiary_type = 'caller' and policy_id = any($1::uuid[])`,
+      [[r1.policy_ids[0], r2.policy_ids[0]]],
+    );
+    const by = Object.fromEntries(rows.map((r) => [r.policy_id, r]));
+    expect(by[r1.policy_ids[0]]).toMatchObject({ m: "1.500", total: "150.00" });
+    expect(by[r2.policy_ids[0]]).toMatchObject({ m: "2.000", total: "200.00" });
+  });
+
+  it("rejects a stale caller multiplier and non-owner changes", async () => {
+    const { appointment_id } = await createAppointment(callerAna, agentMarko, "CallerStale");
+    const payload = buildPoliciesPayload(
+      [{ product_id: productIds[0], monthly_premium: "100.00", duration_years: 10, policy_date: "2026-10-05" }],
+      { agentRatePercent: await rate(agentMarko), callerMultiplier: "3" },
+    );
+    await expect(
+      db.rpc("crm_record_result", { p_actor: agentMarko, p_appointment_id: appointment_id, p_result: "A1", p_note: null, p_next: null, p_policies: payload }),
+    ).rejects.toThrow(/klicatelja se je medtem spremenila/);
+    await expect(db.rpc("crm_set_caller_multiplier", { p_actor: agentMarko, p_caller_id: callerAna, p_multiplier: 5 })).rejects.toThrow(/lastnik/);
+    await expect(db.rpc("crm_set_caller_multiplier", { p_actor: owner, p_caller_id: agentMarko, p_multiplier: 5 })).rejects.toThrow(/samo klicatelju/);
+  });
+
+  it("multipliers are private: callers see only their own, agents none", async () => {
+    expect((await db.asUser<{ caller_id: string }>(callerAna, `select distinct caller_id from caller_commission_rates`)).map((r) => r.caller_id)).toEqual([callerAna]);
+    expect(await db.asUser(agentMarko, `select 1 from caller_commission_rates`)).toHaveLength(0);
+    expect((await db.asUser(owner, `select 1 from caller_commission_rates`)).length).toBeGreaterThan(1);
+  });
+
+  it("new callers get the default ×1.5 automatically", async () => {
+    const id = await db.createUser("caller", "Newcaller");
+    expect(await callerRate(id)).toBe("1.5");
   });
 });
 
@@ -345,7 +392,8 @@ describe("row level security", () => {
     expect(anaRows.map((r) => r.beneficiary_id)).toEqual([callerAna]);
     const markoRows = await db.asUser<{ beneficiary_id: string }>(agentMarko, `select distinct beneficiary_id from commissions`);
     expect(markoRows.map((r) => r.beneficiary_id)).toEqual([agentMarko]);
-    expect(await db.asUser(callerBor, `select id from commission_installments`)).toHaveLength(0);
+    const borRows = await db.asUser<{ beneficiary_id: string }>(callerBor, `select distinct beneficiary_id from commission_installments`);
+    expect(borRows.map((r) => r.beneficiary_id)).toEqual([callerBor]);
 
     // Agent rates are private
     expect(await db.asUser(agentMarko, `select agent_id from agent_commission_rates where agent_id <> $1`, [agentMarko])).toHaveLength(0);

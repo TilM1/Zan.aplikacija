@@ -37,7 +37,7 @@ export default async function EarningsPage({ searchParams }: PageProps<"/earning
         title="Moji zaslužki"
         description={
           profile.role === "caller"
-            ? `Enkratna provizija: mesečna premija × ${COMMISSION_RULES.callerMultiplier.display}, izplačilo ${COMMISSION_RULES.payoutDay}. v mesecu po sklenitvi (presečni dan ${COMMISSION_RULES.cutoffDay}.).`
+            ? `Enkratna provizija: mesečna premija × vaš faktor ob prodaji, izplačilo ${COMMISSION_RULES.payoutDay}. v mesecu po sklenitvi (presečni dan ${COMMISSION_RULES.cutoffDay}.).`
             : `Provizija: premija × 12 × leta × vaš odstotek ob prodaji; izplačilo v treh obrokih (${COMMISSION_RULES.agentInstallments.map((i) => `${i.sharePercent} %`).join(" / ")}).`
         }
       />

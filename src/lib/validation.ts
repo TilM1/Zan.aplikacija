@@ -90,6 +90,12 @@ export const ratePercentSchema = z
   .transform((v) => v.replace(",", "."))
   .refine((v) => /^\d{1,3}(\.\d{1,2})?$/.test(v) && Number(v) >= 0 && Number(v) <= 100, "Odstotek med 0 in 100 (npr. 10 ali 12,5).");
 
+export const callerMultiplierSchema = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(",", "."))
+  .refine((v) => /^\d{1,3}(\.\d{1,3})?$/.test(v) && Number(v) >= 0 && Number(v) <= 100, "Faktor med 0 in 100 (npr. 1,5 ali 2).");
+
 export const employeeSchema = z
   .object({
     first_name: req("Ime"),
@@ -98,12 +104,15 @@ export const employeeSchema = z
     phone: z.string().trim().optional().default(""),
     role: z.enum(["owner", "agent", "caller"]),
     rate_percent: z.string().trim().optional().default(""),
+    caller_multiplier: z.string().trim().optional().default("1.5"),
     password: z.string().min(10, "Geslo mora imeti vsaj 10 znakov."),
   })
   .superRefine((v, ctx) => {
     if (v.role !== "caller") {
       const r = ratePercentSchema.safeParse(v.rate_percent);
       if (!r.success) ctx.addIssue({ code: "custom", path: ["rate_percent"], message: "Za zastopnika vnesite odstotek provizije (0–100)." });
+    } else if (!callerMultiplierSchema.safeParse(v.caller_multiplier).success) {
+      ctx.addIssue({ code: "custom", path: ["caller_multiplier"], message: "Faktor med 0 in 100 (npr. 1,5)." });
     }
   });
 

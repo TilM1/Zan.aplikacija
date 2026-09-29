@@ -11,7 +11,7 @@ import { FilterBar, type FilterDef } from "@/components/pipeline/filter-bar";
 import { AppointmentsTable } from "@/components/appointments/appointments-table";
 import { toPipelineCard } from "@/components/pipeline/to-card";
 import { listAppointments } from "@/server/queries/appointments";
-import { getAgents, getPeople, getVisibleAgentRates, toOptions } from "@/server/queries/people";
+import { getAgents, getPeople, getVisibleCommissionRates, toOptions } from "@/server/queries/people";
 import { getActiveProducts } from "@/server/queries/policies";
 
 export const metadata: Metadata = { title: "Termini" };
@@ -25,7 +25,7 @@ export default async function AppointmentsPage({ searchParams }: PageProps<"/app
   const sort = param(sp, "sort") ?? "-scheduled_at";
   const from = param(sp, "from");
   const to = param(sp, "to");
-  const [people, agents, products, agentRates] = await Promise.all([getPeople(), getAgents(), getActiveProducts(), getVisibleAgentRates()]);
+  const [people, agents, products, rates] = await Promise.all([getPeople(), getAgents(), getActiveProducts(), getVisibleCommissionRates()]);
   const { rows, total } = await listAppointments({
     q: param(sp, "q"),
     status: param(sp, "status"),
@@ -79,7 +79,7 @@ export default async function AppointmentsPage({ searchParams }: PageProps<"/app
           sort={sort}
           sortHref={(s) => hrefWith("/appointments", sp, { sort: s, page: undefined })}
           showCaller={profile.role !== "caller"}
-          actionsProps={{ agents: toOptions(agents), products, agentRates }}
+          actionsProps={{ agents: toOptions(agents), products, rates }}
         />
         <div className="border-t border-line">
           <Pagination page={page} pageSize={PAGE_SIZE} total={total} hrefFor={(p) => hrefWith("/appointments", sp, { page: p })} />

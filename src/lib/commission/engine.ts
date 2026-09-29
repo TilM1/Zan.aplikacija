@@ -6,6 +6,8 @@ import {
   basisHundredthsToPercent,
   centsToDecimal,
   divRoundHalfUp,
+  multiplierToThousandths,
+  thousandthsToMultiplier,
   percentToBasisHundredths,
   toCents,
   type Cents,
@@ -86,10 +88,13 @@ export function agentCommissionTotal(
   return divRoundHalfUp(monthlyPremium * rules.monthsPerYear * durationYears * rateBasisHundredths, 10000);
 }
 
-/** premium × 1.5 */
-export function callerCommissionTotal(monthlyPremium: Cents, rules: CommissionRules = COMMISSION_RULES): Cents {
+/** premium × caller multiplier (multiplier in thousandths, e.g. 1.5 = 1500) */
+export function callerCommissionTotal(monthlyPremium: Cents, multiplierThousandths: number): Cents {
   assertPositiveCents(monthlyPremium);
-  return divRoundHalfUp(monthlyPremium * rules.callerMultiplier.numerator, rules.callerMultiplier.denominator);
+  if (!Number.isInteger(multiplierThousandths) || multiplierThousandths < 0 || multiplierThousandths > 100000) {
+    throw new Error("Multiplier must be between 0 and 100");
+  }
+  return divRoundHalfUp(monthlyPremium * multiplierThousandths, 1000);
 }
 
 /**
@@ -149,7 +154,8 @@ export interface PolicyCommissionInput {
   durationYears: number;
   policyDate: IsoDate;
   agentRatePercent: string; // snapshot of agent's current rate, e.g. "10.00"
-  hasCaller: boolean;
+  /** Snapshot of the caller's current multiplier, e.g. "1.5"; null = appointment has no caller. */
+  callerMultiplier: string | null;
 }
 
 export interface PolicyCommissionPlan {
@@ -158,7 +164,7 @@ export interface PolicyCommissionPlan {
 }
 
 export function buildAgentCommission(
-  input: Omit<PolicyCommissionInput, "hasCaller">,
+  input: Omit<PolicyCommissionInput, "callerMultiplier">,
   rules: CommissionRules = COMMISSION_RULES,
 ): AgentCommissionPlan {
   const premium = toCents(input.monthlyPremium);
@@ -198,20 +204,22 @@ export function buildAgentCommission(
 }
 
 export function buildCallerCommission(
-  input: Pick<PolicyCommissionInput, "monthlyPremium" | "policyDate">,
+  input: Pick<PolicyCommissionInput, "monthlyPremium" | "policyDate"> & { callerMultiplier: string },
   rules: CommissionRules = COMMISSION_RULES,
 ): CallerCommissionPlan {
   const premium = toCents(input.monthlyPremium);
-  const total = callerCommissionTotal(premium, rules);
+  const thousandths = multiplierToThousandths(input.callerMultiplier);
+  const multiplier = thousandthsToMultiplier(thousandths);
+  const total = callerCommissionTotal(premium, thousandths);
   return {
-    caller_multiplier: rules.callerMultiplier.display,
+    caller_multiplier: multiplier,
     total_amount: centsToDecimal(total),
     rule_version: rules.version,
     calculation: {
       formula: "monthly_premium × caller_multiplier",
-      expression: `${centsToDecimal(premium)} × ${rules.callerMultiplier.display}`,
+      expression: `${centsToDecimal(premium)} × ${multiplier}`,
       monthly_premium: centsToDecimal(premium),
-      caller_multiplier: rules.callerMultiplier.display,
+      caller_multiplier: multiplier,
       total: centsToDecimal(total),
       policy_date: input.policyDate,
       paid_with: "agent installment 1",
@@ -233,6 +241,6 @@ export function buildPolicyCommissions(
 ): PolicyCommissionPlan {
   return {
     agent: buildAgentCommission(input, rules),
-    caller: input.hasCaller ? buildCallerCommission(input, rules) : null,
+    caller: input.callerMultiplier !== null ? buildCallerCommission({ ...input, callerMultiplier: input.callerMultiplier }, rules) : null,
   };
 }

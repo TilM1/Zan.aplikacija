@@ -88,6 +88,9 @@ export class TestDb {
       `insert into public.profiles (id, first_name, last_name, email, role, is_demo) values ($1, $2, 'Test', $3, $4, $5)`,
       [id, name, email, role, opts?.isDemo ?? false],
     );
+    if (role === "caller") {
+      await this.query(`insert into public.caller_commission_rates (caller_id, multiplier) values ($1, 1.5)`, [id]);
+    }
     if (ratePercent !== undefined) {
       await this.query(`insert into public.agent_commission_rates (agent_id, rate_percent) values ($1, $2)`, [id, ratePercent]);
     }

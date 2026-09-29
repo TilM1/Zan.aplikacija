@@ -26,8 +26,12 @@ export const COMMISSION_RULES = {
     { number: 3, sharePercent: 25, monthsAfterFirstPayout: 24 },
   ],
 
-  /** Caller one-time commission = monthly premium × multiplier, paid with the agent's first payout. */
-  callerMultiplier: { numerator: 3, denominator: 2, display: "1.5" },
+  /**
+   * Caller one-time commission = monthly premium × the caller's multiplier at sale
+   * (set per caller by the Owner, with history), paid with the agent's first payout.
+   * This default is used for newly created callers.
+   */
+  defaultCallerMultiplier: "1.5",
 } as const;
 
 export type CommissionRules = typeof COMMISSION_RULES;

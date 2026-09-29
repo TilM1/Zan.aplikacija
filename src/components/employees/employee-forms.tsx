@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
 import { useSubmit } from "@/components/shared/use-submit";
-import { createEmployee, setAgentRate, setEmployeePassword, updateEmployee } from "@/server/actions/employees";
+import { createEmployee, setAgentRate, setCallerMultiplier, setEmployeePassword, updateEmployee } from "@/server/actions/employees";
 import { ROLE_LABELS } from "@/lib/labels";
 import type { Role } from "@/types/domain";
 
@@ -23,13 +23,13 @@ export function CreateEmployeeButton() {
   const [open, setOpen] = useState(false);
   const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
   const { submit, pending, error, fieldErrors } = useSubmit<{ user_id: string }>();
-  const [v, setV] = useState({ first_name: "", last_name: "", email: "", phone: "", role: "caller" as Role, rate_percent: "", password: randomPassword() });
+  const [v, setV] = useState({ first_name: "", last_name: "", email: "", phone: "", role: "caller" as Role, rate_percent: "", caller_multiplier: "1,5", password: randomPassword() });
   const set = (k: keyof typeof v, value: string) => setV((x) => ({ ...x, [k]: value }));
 
   const close = () => {
     setOpen(false);
     setCreated(null);
-    setV({ first_name: "", last_name: "", email: "", phone: "", role: "caller", rate_percent: "", password: randomPassword() });
+    setV({ first_name: "", last_name: "", email: "", phone: "", role: "caller", rate_percent: "", caller_multiplier: "1,5", password: randomPassword() });
   };
 
   return (
@@ -99,6 +99,11 @@ export function CreateEmployeeButton() {
                 ))}
               </Select>
             </Field>
+            {v.role === "caller" && (
+              <Field label="Provizija (× mesečna premija)" required error={fieldErrors.caller_multiplier} className="sm:col-span-3" hint="Enkratno na polico, npr. 1,5 = 150 € pri premiji 100 €.">
+                <Input inputMode="decimal" value={v.caller_multiplier} onChange={(e) => set("caller_multiplier", e.target.value)} />
+              </Field>
+            )}
             {v.role !== "caller" && (
               <Field label="Odstotek provizije (%)" required error={fieldErrors.rate_percent} className="sm:col-span-3" hint="Velja za police, sklenjene od zdaj naprej.">
                 <Input inputMode="decimal" value={v.rate_percent} onChange={(e) => set("rate_percent", e.target.value)} placeholder="npr. 10" />
@@ -163,28 +168,52 @@ export function EditEmployeeForm({ employee, isSelf }: { employee: { id: string;
   );
 }
 
-export function RateForm({ agentId, current }: { agentId: string; current: string | null }) {
+/**
+ * Change an employee's commission: agent rate (%) or caller multiplier (×).
+ * Always creates a new history entry; existing policies keep the value they were sold with.
+ */
+export function RateForm({ employeeId, kind, current }: { employeeId: string; kind: "agent" | "caller"; current: string | null }) {
   const router = useRouter();
   const { submit, pending, error } = useSubmit();
-  const [rate, setRate] = useState(current ?? "");
+  const [value, setValue] = useState(current?.replace(".", ",") ?? "");
+  const [confirming, setConfirming] = useState(false);
+  const label = kind === "agent" ? "Nov odstotek (%)" : "Nov faktor (× mesečna premija)";
+  const pretty = (x: string) => (kind === "agent" ? `${x} %` : `× ${x}`);
   return (
     <div className="flex flex-col gap-2">
       <FormError message={error} />
       <div className="flex items-end gap-2">
-        <Field label="Nov odstotek (%)" className="flex-1">
-          <Input inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} />
+        <Field label={label} className="flex-1">
+          <Input inputMode="decimal" value={value} onChange={(e) => { setValue(e.target.value); setConfirming(false); }} />
         </Field>
-        <Button
-          loading={pending}
-          onClick={async () => {
-            const res = await submit(() => setAgentRate({ agent_id: agentId, rate_percent: rate }));
-            if (res?.ok) router.refresh();
-          }}
-        >
-          Nastavi
-        </Button>
+        {!confirming ? (
+          <Button variant="secondary" disabled={!value.trim() || value.replace(",", ".") === current} onClick={() => setConfirming(true)}>
+            Spremeni
+          </Button>
+        ) : (
+          <Button
+            loading={pending}
+            onClick={async () => {
+              const res = await submit(() =>
+                kind === "agent" ? setAgentRate({ agent_id: employeeId, rate_percent: value }) : setCallerMultiplier({ caller_id: employeeId, multiplier: value }),
+              );
+              if (res?.ok) {
+                setConfirming(false);
+                router.refresh();
+              }
+            }}
+          >
+            Potrdi
+          </Button>
+        )}
       </div>
-      <p className="text-xs text-ink-3">Obstoječe police ohranijo odstotek, veljaven ob prodaji.</p>
+      {confirming ? (
+        <p className="rounded-md bg-warning-soft px-3 py-2 text-xs text-warning">
+          {current ? pretty(current.replace(".", ",")) : "–"} → <b>{pretty(value)}</b> velja za vse police, shranjene od zdaj naprej. Že sklenjene police in njihova izplačila ostanejo po starem.
+        </p>
+      ) : (
+        <p className="text-xs text-ink-3">Sprememba ne vpliva za nazaj – vsaka polica ohrani provizijo, veljavno ob prodaji.</p>
+      )}
     </div>
   );
 }

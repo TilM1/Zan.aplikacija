@@ -42,6 +42,7 @@ products ──< policies
 |---|---|
 | `profiles` | 1:1 with `auth.users` (`id` = auth user id). Holds role (`owner`/`agent`/`caller`) and `is_active`. Deleting a profile is blocked; deactivate instead, so historical production stays intact. |
 | `agent_commission_rates` | Append-only history of each Agent's %. The current rate is the latest row. |
+| `caller_commission_rates` | Append-only history of each Caller's multiplier (default 1.5). The current value is the latest row. |
 | `products` | Configurable products. The three initial products are seeded. `policies.product_name` snapshots the name. |
 | `customers` | One persistent row per person, never duplicated per visit. `responsible_caller_id` is the Caller who originated the customer. `status` is the latest state (`scheduled`, `callback`, `won`, `lost`, `closed`). `search_text` has a trigram index for fast search. |
 | `appointments` | **An appointment plus its result is the consultation.** A separate consultations table would duplicate the 1:1 relationship. `visit_number` and `previous_appointment_id` form the visit chain. `caller_id` is the Caller attribution for this appointment and is inherited by result-A follow-ups. It is not changed by agent reassignment. At most one open appointment per customer (partial unique index). Calendar-sync fields are ready for Outlook. |

@@ -25,7 +25,7 @@ export function CommissionBreakdown({ commission, beneficiaryName, today }: { co
         <p className="mt-0.5 text-xs text-ink-3">
           {commission.beneficiary_type === "agent"
             ? `Mesečna premija × 12 × trajanje (${commission.base_duration_years} let) × odstotek zastopnika ob prodaji (${Number(commission.rate_percent).toFixed(2)} %)`
-            : `Mesečna premija × ${Number(commission.caller_multiplier)} – enkratno, izplačano skupaj s 1. obrokom zastopnika`}
+            : `Mesečna premija × faktor klicatelja ob prodaji (${Number(commission.caller_multiplier).toLocaleString("sl-SI")}) – enkratno, izplačano skupaj s 1. obrokom zastopnika`}
           {" · "}datum police {formatDate(commission.policy_date)}
         </p>
       </div>

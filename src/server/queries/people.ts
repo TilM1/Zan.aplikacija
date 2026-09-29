@@ -29,12 +29,34 @@ export function nameOf(people: Map<string, Profile>, id: string | null | undefin
 export type PersonOption = { id: string; name: string };
 export const toOptions = (list: Profile[]): PersonOption[] => list.map((p) => ({ id: p.id, name: `${p.first_name} ${p.last_name}` }));
 
+export interface CommissionRates {
+  /** agent id → current rate % ("10.00") */
+  agents: Record<string, string>;
+  /** caller id → current multiplier ("1.5") */
+  callers: Record<string, string>;
+}
+
 /**
- * Latest commission rate per agent that the user may see
- * (RLS: owner sees all, agents only their own). Used for previews only —
- * the authoritative rate is read server-side when saving.
+ * Current commission settings the user may see (RLS: owner sees all, an agent
+ * only their own rate, a caller only their own multiplier). Used for display
+ * and previews only — authoritative values are read server-side when saving.
  */
-export async function getVisibleAgentRates(): Promise<Record<string, string>> {
+export async function getVisibleCommissionRates(): Promise<CommissionRates> {
+  const supabase = await createClient();
+  const [agents, callers] = await Promise.all([
+    getVisibleAgentRates(),
+    supabase
+      .from("caller_commission_rates")
+      .select("caller_id, multiplier, effective_from, created_at")
+      .order("effective_from", { ascending: false })
+      .order("created_at", { ascending: false }),
+  ]);
+  const callerMap: Record<string, string> = {};
+  for (const r of callers.data ?? []) if (!(r.caller_id in callerMap)) callerMap[r.caller_id] = String(Number(r.multiplier));
+  return { agents, callers: callerMap };
+}
+
+async function getVisibleAgentRates(): Promise<Record<string, string>> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("agent_commission_rates")

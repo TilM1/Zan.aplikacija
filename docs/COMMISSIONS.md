@@ -21,10 +21,10 @@ Example: 100 € × 12 × 10 × 10 % = **1,200 €**, split into:
 **Caller (per policy, one-time)**
 
 ```
-total = monthly_premium × 1.5
+total = monthly_premium × caller_multiplier (per caller, default 1.5)
 ```
 
-Example: 100 € → **150 €**, due on the same date as the Agent's first installment. With several policies from one consultation, each policy produces its own Agent and Caller commission.
+Example with ×1.5: 100 € → **150 €**, due on the same date as the Agent's first installment. With several policies from one consultation, each policy produces its own Agent and Caller commission.
 
 ## Payout timing
 
@@ -40,6 +40,15 @@ Example: 100 € → **150 €**, due on the same date as the Agent's first inst
 
 The date used is the **policy date** entered by the Agent. It defaults to the consultation day.
 
+## Changing commissions (Owner)
+
+**Zaposleni → person → Provizija** (or click the value in the "Provizija" column):
+
+- Agents: rate in % (e.g. 10 → 12).
+- Callers: multiplier × monthly premium (e.g. 1.5 → 2).
+
+Each change adds a row to the history (`agent_commission_rates` / `caller_commission_rates`) with the time and who set it. The new value applies to every policy **saved from that moment on**. Policies already saved keep the value they were sold with, and so does their payout schedule. Nothing is recalculated retroactively.
+
 ## Rounding
 
 - All arithmetic is in integer cents.
@@ -50,7 +59,7 @@ The date used is the **policy date** entered by the Agent. It defaults to the co
 
 When a policy is saved, each commission row stores:
 
-- `base_monthly_premium`, `base_duration_years`, `rate_percent` (Agent % at sale) or `caller_multiplier`
+- `base_monthly_premium`, `base_duration_years`, `rate_percent` (Agent % at sale) or `caller_multiplier` (Caller multiplier at sale)
 - `policy_date`, `rule_version` (e.g. `2026-09-v1`)
 - `calculation` (JSON), including a human-readable expression such as `100.00 × 12 × 10 × 10.00%`
 
@@ -58,7 +67,7 @@ Safeguards:
 
 - **Rate changes never alter history.** Rates are an append-only history table, and existing commissions keep their snapshot.
 - The DB **re-verifies** each total with CHECK constraints, so a tampered amount is rejected.
-- `crm_record_result` rejects the save if the Agent's rate changed between preview and save.
+- The save is rejected if the Agent's rate or the Caller's multiplier changed between preview and save.
 - Commission rows are immutable (only `status` may change). Policy financial fields are frozen. Installments can only go from `scheduled` to `paid` or `cancelled`, and paid rows are final (`paid_at`, `paid_by`, `paid_amount`, `original_due_date` are kept).
 
 ## Changing the rules later

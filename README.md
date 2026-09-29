@@ -71,7 +71,8 @@ Demo users (all `@demo.zan-crm.si`, password `Demo-Zan-2026!`):
 | marko.kovac@ | Agent | 10 % |
 | luka.horvat@ | Agent | 10 % → **12 %** (raised 60 days ago – older policies keep 10 %) |
 | nina.zupan@ | Agent | 11.5 % |
-| ana.novak@, petra.krajnc@, jure.golob@ | Caller | × 1.5 |
+| ana.novak@, jure.golob@ | Caller | × 1.5 |
+| petra.krajnc@ | Caller | × 1.5 → **× 2** (raised 10 days ago – older policies keep × 1.5) |
 
 ~30 customers cover: upcoming and today's appointments, results awaiting entry, A0, B with open follow-ups, B → rescheduled (with another agent), B → A1, A → new appointment with another agent, multi-visit customers, multiple policies per consultation, policies around the 23/24/25 cutoff, 13- and 25-month installments, the Owner selling, an agent self-booked sale without a caller, a cancelled appointment and a closed follow-up.
 
@@ -92,7 +93,8 @@ Access is enforced by **PostgreSQL Row Level Security and server-side checks**, 
 ## Commission rules (summary)
 
 - Agent: `monthly premium × 12 × years × agent % (snapshotted at sale)`, paid 55 % / 20 % / 25 %.
-- Caller: `monthly premium × 1.5` per policy, paid once.
+- Caller: `monthly premium × caller multiplier (snapshotted at sale; default 1.5)` per policy, paid once.
+- The Owner changes both under **Zaposleni → person → Provizija**. Changes apply only to policies saved afterwards.
 - Policy dated on or before the 24th → first payout on the 16th of next month; after the 24th → 16th of the month after. The 2nd and 3rd agent installments follow 12 and 24 months after the first payout (payout months 1, 13, 25). The Caller is paid on the same date as the Agent's first installment.
 
 Details, examples and rounding rules: [docs/COMMISSIONS.md](docs/COMMISSIONS.md).

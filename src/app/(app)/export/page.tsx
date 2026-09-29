@@ -1,0 +1,64 @@
+import type { Metadata } from "next";
+import { Download, ShieldAlert } from "lucide-react";
+import { requireSession } from "@/lib/auth";
+import { param } from "@/lib/url";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/misc";
+import { buttonClasses } from "@/components/ui/button";
+import { FilterBar } from "@/components/pipeline/filter-bar";
+import { EXPORT_DATASETS } from "@/server/export/datasets";
+
+export const metadata: Metadata = { title: "Izvoz podatkov" };
+
+export default async function ExportPage({ searchParams }: PageProps<"/export">) {
+  await requireSession(["owner"]);
+  const sp = await searchParams;
+  const qs = new URLSearchParams();
+  if (param(sp, "from")) qs.set("from", param(sp, "from")!);
+  if (param(sp, "to")) qs.set("to", param(sp, "to")!);
+  const suffix = (format: string) => `?${new URLSearchParams({ ...Object.fromEntries(qs), format }).toString()}`;
+
+  return (
+    <>
+      <PageHeader title="Izvoz podatkov" description="Operativni in varnostni izvoz ključnih podatkov CRM (samo lastnik)." />
+      <div className="mb-4 flex gap-3 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-ink-2">
+        <ShieldAlert className="mt-0.5 size-5 shrink-0 text-warning" />
+        <div>
+          <p className="font-medium text-ink">Izvoz CSV/XLSX ni varnostna kopija baze.</p>
+          <p className="mt-0.5">
+            Izvoz je namenjen pregledu in zasilni offline kopiji. Varnostne kopije in obnova baze potekajo v Supabase (dnevne kopije / Point-in-Time Recovery) – glejte
+            dokument <code className="rounded bg-surface px-1">docs/BACKUP_AND_RECOVERY.md</code>. Izvozi vsebujejo osebne podatke: hranite jih varno in v skladu z GDPR.
+          </p>
+        </div>
+      </div>
+      <FilterBar className="mb-4" filters={[{ key: "from", label: "Od (neobvezno)", type: "date" }, { key: "to", label: "Do (neobvezno)", type: "date" }]} />
+      <Card className="mb-4">
+        <CardHeader title="Celoten izvoz" description="Vsi nabori podatkov v enem Excel delovnem zvezku (en list na nabor)" />
+        <CardBody>
+          <a href={`/api/export/all${suffix("xlsx")}`} className={buttonClasses("primary")}>
+            <Download className="size-4" /> Prenesi vse (XLSX)
+          </a>
+        </CardBody>
+      </Card>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {EXPORT_DATASETS.map((ds) => (
+          <Card key={ds.key}>
+            <CardBody className="flex h-full flex-col">
+              <p className="font-medium">{ds.label}</p>
+              <p className="mt-1 flex-1 text-sm text-ink-3">{ds.description}</p>
+              <p className="mt-2 text-xs text-ink-3">{ds.dateColumn ? `Filter po: ${ds.dateColumn}` : "Vedno celoten nabor"}</p>
+              <div className="mt-3 flex gap-2">
+                <a href={`/api/export/${ds.key}${suffix("csv")}`} className={buttonClasses("secondary", "sm")}>
+                  <Download className="size-3.5" /> CSV
+                </a>
+                <a href={`/api/export/${ds.key}${suffix("xlsx")}`} className={buttonClasses("secondary", "sm")}>
+                  <Download className="size-3.5" /> XLSX
+                </a>
+              </div>
+            </CardBody>
+          </Card>
+        ))}
+      </div>
+    </>
+  );
+}

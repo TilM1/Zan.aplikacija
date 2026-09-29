@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-subtle: #f1f3f5;
+  --color-line: #e3e6ea;
+  --color-line-strong: #cfd4da;
+  --color-ink: #16191d;
+  --color-ink-2: #4a525c;
+  --color-ink-3: #7a838e;
+
+  --color-brand: #1f3a5f;
+  --color-brand-hover: #182f4d;
+  --color-brand-soft: #e8eef6;
+
+  --color-info: #2457a6;
+  --color-info-soft: #e7eefa;
+  --color-success: #1d7a4b;
+  --color-success-soft: #e4f4ea;
+  --color-warning: #9a5b00;
+  --color-warning-soft: #fdf1dc;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdecea;
+  --color-accent: #6941c6;
+  --color-accent-soft: #f0ebfb;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: var(--color-brand-soft);
+  }
+  dialog::backdrop {
+    background: rgb(16 20 26 / 0.45);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}

@@ -8,19 +8,19 @@ let db: TestDb;
 
 beforeAll(async () => {
   db = await TestDb.create();
-  // A real (non-demo) customer must survive the purge
-  const owner = await db.createUser("owner", "RealOwner", "10");
-  await db.rpc("crm_create_customer_with_appointment", {
-    p_actor: owner,
-    p_customer: { first_name: "Real", last_name: "Customer", phone: "+386 31 111 111", address: "Real 1", postal_code: "1000" },
-    p_appointment: { agent_id: owner, scheduled_at: "2026-12-01T09:00:00Z" },
-  });
 });
 afterAll(async () => db?.close());
 
 describe("demo seed", () => {
   it("applies cleanly against the real schema and constraints", async () => {
     await db.pg.exec(generateDemoSeed("2026-09-29"));
+    // A real (non-demo) customer must survive the purge later
+    const owner = await db.createUser("owner", "RealOwner", "10");
+    await db.rpc("crm_create_customer_with_appointment", {
+      p_actor: owner,
+      p_customer: { first_name: "Real", last_name: "Customer", phone: "+386 31 111 111", address: "Real 1", postal_code: "1000" },
+      p_appointment: { agent_id: owner, scheduled_at: "2026-12-01T09:00:00Z" },
+    });
     const counts = await db.one<Record<string, number>>(`select
       (select count(*)::int from customers where is_demo) customers,
       (select count(*)::int from profiles where is_demo) profiles,
@@ -36,6 +36,13 @@ describe("demo seed", () => {
     expect(counts.repeat_visits).toBeGreaterThanOrEqual(4);
     expect(counts.paid).toBeGreaterThan(0);
     expect(counts.due).toBeGreaterThan(0);
+  });
+
+  it("refuses to load demo data into a database with real users", async () => {
+    const fresh = await TestDb.create();
+    await fresh.createUser("owner", "Prod", "10");
+    await expect(fresh.pg.exec(generateDemoSeed("2026-09-29"))).rejects.toThrow(/real users/);
+    await fresh.close();
   });
 
   it("snapshots Luka's old 10% rate on old policies and 12% on new ones", async () => {
@@ -65,7 +72,7 @@ describe("demo seed", () => {
     const left = await db.one<Record<string, number>>(`select
       (select count(*)::int from profiles where is_demo) profiles,
       (select count(*)::int from customers where is_demo) customers,
-      (select count(*)::int from auth.users where email like '%@demo.zan-crm.si') users,
+      (select count(*)::int from auth.users where email like '%@demo.zan-crm.invalid') users,
       (select count(*)::int from customers where first_name = 'Real') real`);
     expect(left).toEqual({ profiles: 0, customers: 0, users: 0, real: 1 });
   });

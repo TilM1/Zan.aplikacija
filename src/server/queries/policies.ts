@@ -1,5 +1,8 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { parseSort } from "@/lib/url";
+
+export const POLICY_SORTS = ["policy_date", "product_name", "policy_number", "monthly_premium", "duration_years", "agent_id", "caller_id", "created_at"] as const;
 import type { Commission, Customer, DocumentRow, Installment, Policy } from "@/types/domain";
 
 export type PolicyWithCustomer = Policy & { customer: Pick<Customer, "id" | "first_name" | "last_name" | "phone"> };
@@ -11,6 +14,7 @@ export interface PolicyFilters {
   caller?: string;
   from?: string; // date
   to?: string; // date (inclusive)
+  sort?: string;
   page: number;
   pageSize: number;
 }
@@ -32,10 +36,11 @@ export async function listPolicies(f: PolicyFilters) {
   if (f.caller) q = q.eq("caller_id", f.caller);
   if (f.from) q = q.gte("policy_date", f.from);
   if (f.to) q = q.lte("policy_date", f.to);
-  q = q.order("policy_date", { ascending: false }).order("created_at", { ascending: false }).range((f.page - 1) * f.pageSize, f.page * f.pageSize - 1);
+  const s = parseSort(f.sort, POLICY_SORTS, "-policy_date");
+  q = q.order(s.column, { ascending: s.ascending, nullsFirst: false }).order("created_at", { ascending: false }).range((f.page - 1) * f.pageSize, f.page * f.pageSize - 1);
   const { data, count, error } = await q;
   if (error) throw error;
-  return { rows: (data ?? []) as PolicyWithCustomer[], total: count ?? 0 };
+  return { rows: (data ?? []) as PolicyWithCustomer[], total: count ?? 0, sort: s.sort };
 }
 
 export async function getPolicyDetail(id: string) {

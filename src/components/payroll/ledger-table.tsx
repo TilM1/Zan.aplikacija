@@ -7,7 +7,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, FormError, Input } from "@/components/ui/form";
-import { Table, TD, TH, THead, TR } from "@/components/ui/table";
+import { SortLink, Table, TD, TH, THead, TR } from "@/components/ui/table";
 import { InstallmentStatusBadge } from "@/components/ui/status";
 import { useSubmit } from "@/components/shared/use-submit";
 import { markInstallmentsPaid } from "@/server/actions/payroll";
@@ -17,7 +17,32 @@ import { formatDecimalEur, formatEur, sumDecimals } from "@/lib/money";
 import { displayStatus } from "@/lib/payroll";
 import type { LedgerRow } from "@/server/queries/payroll";
 
-export function LedgerTable({ rows, names, canMarkPaid, showBeneficiary }: { rows: LedgerRow[]; names: Record<string, string>; canMarkPaid: boolean; showBeneficiary: boolean }) {
+export function LedgerTable({
+  rows,
+  names,
+  canMarkPaid,
+  showBeneficiary,
+  sort,
+  sortHrefs,
+}: {
+  rows: LedgerRow[];
+  names: Record<string, string>;
+  canMarkPaid: boolean;
+  showBeneficiary: boolean;
+  /** Current ?sort value and prebuilt links (asc/desc) per sortable column. */
+  sort: string;
+  sortHrefs: Record<string, { asc: string; desc: string }>;
+}) {
+  const sortTh = (label: string, column: string, className?: string, firstDesc = false) => {
+    const active = sort.replace(/^-/, "") === column;
+    const desc = sort.startsWith("-");
+    const href = active ? (desc ? sortHrefs[column].asc : sortHrefs[column].desc) : firstDesc ? sortHrefs[column].desc : sortHrefs[column].asc;
+    return (
+      <TH className={className}>
+        <SortLink href={href} active={active} desc={desc} label={label} />
+      </TH>
+    );
+  };
   const router = useRouter();
   const today = todayIso();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -68,14 +93,14 @@ export function LedgerTable({ rows, names, canMarkPaid, showBeneficiary }: { row
               </TH>
             )}
             <TH className="w-6" />
-            <TH>Zapadlost</TH>
-            {showBeneficiary && <TH>Prejemnik</TH>}
-            <TH>Vrsta</TH>
+            {sortTh("Zapadlost", "due_date")}
+            {showBeneficiary && sortTh("Prejemnik", "beneficiary_id")}
+            {sortTh("Vrsta", "beneficiary_type")}
             <TH>Stranka</TH>
             <TH>Polica</TH>
-            <TH>Obrok</TH>
-            <TH className="text-right">Znesek</TH>
-            <TH>Status</TH>
+            {sortTh("Obrok", "installment_number")}
+            {sortTh("Znesek", "amount", "text-right", true)}
+            {sortTh("Status", "status")}
           </tr>
         </THead>
         <tbody>

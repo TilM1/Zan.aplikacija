@@ -12,7 +12,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader, Stat } from "@/components/ui/misc";
 import { Table, TD, TH, THead, TR } from "@/components/ui/table";
-import { EditEmployeeForm, PasswordReset, RateForm } from "@/components/employees/employee-forms";
+import { EditEmployeeForm, EmailForm, PasswordReset, RateForm } from "@/components/employees/employee-forms";
 import { AggTable, monthRows } from "@/components/dashboard/report-tables";
 import { summarize } from "@/components/payroll/summaries";
 import { getPeople, nameOf } from "@/server/queries/people";
@@ -139,9 +139,14 @@ export default async function EmployeePage({ params }: PageProps<"/employees/[id
             )}
           </Card>
           <Card>
-            <CardHeader title="Ponastavi geslo" />
-            <CardBody>
-              <PasswordReset userId={id} />
+            <CardHeader title="Prijava" description="E-pošta za prijavo in začasno geslo" />
+            <CardBody className="flex flex-col gap-5">
+              <EmailForm userId={id} current={emp.email} />
+              {emp.id !== me.id ? (
+                <PasswordReset userId={id} />
+              ) : (
+                <p className="text-xs text-ink-3">Svoje geslo spremenite v Profilu.</p>
+              )}
             </CardBody>
           </Card>
         </div>

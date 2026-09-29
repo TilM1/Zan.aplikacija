@@ -6,6 +6,18 @@ import { z } from "zod";
 import { isValidMoneyInput } from "@/lib/money";
 import { isValidIsoDate } from "@/lib/dates";
 
+/**
+ * Password policy: 10–72 chars (bcrypt limit), letters and digits,
+ * not a trivially common password.
+ */
+const COMMON_PASSWORDS = ["password", "geslo", "123456", "qwerty", "zavarovanje", "crm", "admin", "welcome", "letmein"];
+export const passwordSchema = z
+  .string()
+  .min(10, "Geslo mora imeti vsaj 10 znakov.")
+  .max(72, "Geslo je predolgo (največ 72 znakov).")
+  .refine((v) => /[A-Za-zČŠŽčšž]/.test(v) && /\d/.test(v), "Geslo mora vsebovati črke in številke.")
+  .refine((v) => !COMMON_PASSWORDS.some((c) => v.toLowerCase().includes(c) && v.length < c.length + 6), "Geslo je preveč predvidljivo.");
+
 const req = (label: string) => z.string().trim().min(1, `${label} je obvezno polje.`);
 const uuid = (label: string) => z.string().uuid(`Izberite ${label}.`);
 
@@ -105,7 +117,7 @@ export const employeeSchema = z
     role: z.enum(["owner", "agent", "caller"]),
     rate_percent: z.string().trim().optional().default(""),
     caller_multiplier: z.string().trim().optional().default("1.5"),
-    password: z.string().min(10, "Geslo mora imeti vsaj 10 znakov."),
+    password: passwordSchema,
   })
   .superRefine((v, ctx) => {
     if (v.role !== "caller") {

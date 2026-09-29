@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Repeat } from "lucide-react";
-import { Table, TD, TH, THead, TR } from "@/components/ui/table";
-import { AppointmentStatusBadge } from "@/components/ui/status";
+import { SortTH, Table, TD, TH, THead, TR } from "@/components/ui/table";
+import { AppointmentStatusBadge, ResultBadge } from "@/components/ui/status";
 import { EmptyState } from "@/components/ui/misc";
 import { formatDate, formatTime } from "@/lib/dates";
 import { nameOf } from "@/server/queries/people";
@@ -29,27 +29,20 @@ export function AppointmentsTable({
   actionsProps: Omit<React.ComponentProps<typeof AppointmentRowActions>, "card">;
 }) {
   if (rows.length === 0) return <EmptyState title="Ni terminov" description="Ni terminov, ki ustrezajo filtrom." />;
-  const sortLink = (col: string, label: string) => {
-    const active = sort.replace("-", "") === col;
-    const next = active && !sort.startsWith("-") ? `-${col}` : col;
-    return (
-      <Link href={sortHref(next)} className={active ? "text-ink" : ""}>
-        {label} {active ? (sort.startsWith("-") ? "↓" : "↑") : ""}
-      </Link>
-    );
-  };
+  const sp = { sort, hrefFor: sortHref };
   return (
     <Table>
       <THead>
         <tr>
-          <TH>{sortLink("scheduled_at", "Termin")}</TH>
+          <SortTH label="Termin" column="scheduled_at" firstDesc {...sp} />
           <TH>Stranka</TH>
           <TH>Telefon</TH>
-          <TH>Lokacija</TH>
-          {showAgent && <TH>Zastopnik</TH>}
-          {showCaller && <TH>Klicatelj</TH>}
-          <TH>{sortLink("visit_number", "Obisk")}</TH>
-          <TH>Status / rezultat</TH>
+          <SortTH label="Lokacija" column="location" {...sp} />
+          {showAgent && <SortTH label="Zastopnik" column="agent_id" {...sp} />}
+          {showCaller && <SortTH label="Klicatelj" column="caller_id" {...sp} />}
+          <SortTH label="Obisk" column="visit_number" firstDesc {...sp} />
+          <SortTH label="Status" column="status" {...sp} />
+          <SortTH label="Rezultat" column="result" {...sp} />
           <TH className="text-right">Dejanja</TH>
         </tr>
       </THead>
@@ -84,8 +77,9 @@ export function AppointmentsTable({
               )}
             </TD>
             <TD>
-              <AppointmentStatusBadge status={a.status} result={a.result} />
+              <AppointmentStatusBadge status={a.status} result={null} />
             </TD>
+            <TD>{a.result ? <ResultBadge result={a.result} /> : <span className="text-ink-3">–</span>}</TD>
             <TD className="text-right">
               <AppointmentRowActions card={cards.get(a.id)!} {...actionsProps} />
             </TD>

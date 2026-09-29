@@ -7,7 +7,7 @@ import { formatDate, formatDateTime } from "@/lib/dates";
 import { CUSTOMER_STATUS_LABELS } from "@/lib/labels";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader, Pagination } from "@/components/ui/misc";
-import { Table, TD, TH, THead, TR } from "@/components/ui/table";
+import { SortTH, Table, TD, THead, TR } from "@/components/ui/table";
 import { CustomerStatusBadge, ResultBadge } from "@/components/ui/status";
 import { buttonClasses } from "@/components/ui/button";
 import { FilterBar } from "@/components/pipeline/filter-bar";
@@ -22,10 +22,12 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
   const sp = await searchParams;
   const page = pageParam(sp);
   const archived = param(sp, "archived") === "1";
-  const [{ rows, total }, people] = await Promise.all([
-    listCustomers({ q: param(sp, "q"), status: param(sp, "status"), archived, page, pageSize: PAGE_SIZE }),
+  const [{ rows, total, sort }, people] = await Promise.all([
+    listCustomers({ q: param(sp, "q"), status: param(sp, "status"), archived, sort: param(sp, "sort"), page, pageSize: PAGE_SIZE }),
     getPeople(),
   ]);
+
+  const sortProps = { sort, hrefFor: (s: string) => hrefWith("/customers", sp, { sort: s, page: undefined }) };
 
   return (
     <>
@@ -57,17 +59,17 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
           <Table>
             <THead>
               <tr>
-                <TH>Stranka</TH>
-                <TH>Telefon</TH>
-                <TH>Kraj</TH>
-                <TH>Status</TH>
-                <TH>Zadnji rezultat</TH>
-                <TH className="text-right">Svetovanja</TH>
-                <TH className="text-right">Police</TH>
-                <TH>Naslednji termin</TH>
-                <TH>Zastopnik</TH>
-                <TH>Klicatelj</TH>
-                <TH>Ustvarjena</TH>
+                <SortTH label="Stranka" column="last_name" {...sortProps} />
+                <SortTH label="Telefon" column="phone" {...sortProps} />
+                <SortTH label="Kraj" column="postal_code" {...sortProps} />
+                <SortTH label="Status" column="status" {...sortProps} />
+                <SortTH label="Zadnji rezultat" column="last_result" {...sortProps} />
+                <SortTH label="Svetovanja" column="consultation_count" firstDesc className="text-right" {...sortProps} />
+                <SortTH label="Police" column="policy_count" firstDesc className="text-right" {...sortProps} />
+                <SortTH label="Naslednji termin" column="next_appointment_at" {...sortProps} />
+                <SortTH label="Zastopnik" column="current_agent_id" {...sortProps} />
+                <SortTH label="Klicatelj" column="responsible_caller_id" {...sortProps} />
+                <SortTH label="Ustvarjena" column="created_at" firstDesc {...sortProps} />
               </tr>
             </THead>
             <tbody>

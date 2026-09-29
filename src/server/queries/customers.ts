@@ -1,5 +1,11 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { parseSort } from "@/lib/url";
+
+export const CUSTOMER_SORTS = [
+  "last_name", "phone", "postal_code", "status", "last_result", "consultation_count", "policy_count",
+  "next_appointment_at", "current_agent_id", "responsible_caller_id", "created_at", "updated_at",
+] as const;
 import type {
   ActivityRow, Appointment, CallerFollowup, Commission, CustomerOverview, DocumentRow, Installment, Policy,
 } from "@/types/domain";
@@ -18,6 +24,7 @@ export interface CustomerFilters {
   q?: string;
   status?: string;
   archived?: boolean;
+  sort?: string;
   page: number;
   pageSize: number;
 }
@@ -32,10 +39,13 @@ export async function listCustomers(f: CustomerFilters) {
   }
   if (f.status) q = q.eq("status", f.status);
   q = f.archived ? q.not("archived_at", "is", null) : q.is("archived_at", null);
-  q = q.order("updated_at", { ascending: false }).range((f.page - 1) * f.pageSize, f.page * f.pageSize - 1);
+  const s = parseSort(f.sort, CUSTOMER_SORTS, "-created_at");
+  q = q.order(s.column, { ascending: s.ascending, nullsFirst: false });
+  if (s.column === "last_name") q = q.order("first_name", { ascending: s.ascending });
+  q = q.order("id").range((f.page - 1) * f.pageSize, f.page * f.pageSize - 1);
   const { data, count, error } = await q;
   if (error) throw error;
-  return { rows: (data ?? []) as CustomerOverview[], total: count ?? 0 };
+  return { rows: (data ?? []) as CustomerOverview[], total: count ?? 0, sort: s.sort };
 }
 
 export async function getCustomerDetail(id: string) {

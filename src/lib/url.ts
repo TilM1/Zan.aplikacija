@@ -27,3 +27,12 @@ export function hrefWith(path: string, sp: SearchParams, patch: Record<string, s
 }
 
 export const isUuid = (v: string | undefined): v is string => !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+
+/**
+ * Parse ?sort=column or ?sort=-column (descending) against a whitelist.
+ * Unknown columns fall back to the default (prevents arbitrary ordering input).
+ */
+export function parseSort<T extends string>(value: string | undefined, allowed: readonly T[], fallback: `${"" | "-"}${T}`) {
+  const raw = value && allowed.includes(value.replace(/^-/, "") as T) ? value : fallback;
+  return { sort: raw, column: raw.replace(/^-/, "") as T, ascending: !raw.startsWith("-") };
+}

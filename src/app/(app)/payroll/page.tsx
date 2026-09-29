@@ -9,7 +9,8 @@ import { EmptyState, PageHeader, Pagination, Stat, Tabs } from "@/components/ui/
 import { FilterBar } from "@/components/pipeline/filter-bar";
 import { LedgerTable } from "@/components/payroll/ledger-table";
 import { ByEmployeeCard, ByMonthCard, summarize } from "@/components/payroll/summaries";
-import { getInstallmentsForSummary, listLedger, type LedgerFilters } from "@/server/queries/payroll";
+import { getInstallmentsForSummary, LEDGER_SORTS, listLedger, type LedgerFilters } from "@/server/queries/payroll";
+import { buildSortHrefs } from "@/lib/sort-links";
 import { getPeople } from "@/server/queries/people";
 
 export const metadata: Metadata = { title: "Provizije in izplačila" };
@@ -31,8 +32,8 @@ export default async function PayrollPage({ searchParams }: PageProps<"/payroll"
   const beneficiary = isUuid(param(sp, "beneficiary")) ? param(sp, "beneficiary") : undefined;
   const type = param(sp, "type") as "agent" | "caller" | undefined;
 
-  const [{ rows, total }, unpaid, people] = await Promise.all([
-    listLedger({ status, beneficiary, type: type === "agent" || type === "caller" ? type : undefined, from: param(sp, "from"), to: param(sp, "to"), today, page, pageSize: PAGE_SIZE }),
+  const [{ rows, total, sort }, unpaid, people] = await Promise.all([
+    listLedger({ status, beneficiary, type: type === "agent" || type === "caller" ? type : undefined, from: param(sp, "from"), to: param(sp, "to"), today, sort: param(sp, "sort"), page, pageSize: PAGE_SIZE }),
     getInstallmentsForSummary({ statuses: ["scheduled"], beneficiary }),
     getPeople(),
   ]);
@@ -67,7 +68,7 @@ export default async function PayrollPage({ searchParams }: PageProps<"/payroll"
         {rows.length === 0 ? (
           <EmptyState title="Ni izplačil" description="Za izbrane filtre ni zapisov v knjigi izplačil." />
         ) : (
-          <LedgerTable rows={rows} names={names} canMarkPaid showBeneficiary />
+          <LedgerTable rows={rows} names={names} canMarkPaid showBeneficiary sort={sort} sortHrefs={buildSortHrefs("/payroll", sp, LEDGER_SORTS)} />
         )}
         <div className="border-t border-line">
           <Pagination page={page} pageSize={PAGE_SIZE} total={total} hrefFor={(p) => hrefWith("/payroll", sp, { page: p })} />

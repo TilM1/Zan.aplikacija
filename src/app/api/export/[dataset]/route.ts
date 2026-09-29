@@ -44,7 +44,7 @@ function addSheet(wb: ExcelJS.Workbook, name: string, rows: Record<string, unkno
  */
 export async function GET(req: NextRequest, ctx: RouteContext<"/api/export/[dataset]">) {
   const session = await getSession();
-  if (!session || session.profile.role !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!session || session.mustChangePassword || session.profile.role !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { dataset } = await ctx.params;
   const format = req.nextUrl.searchParams.get("format") === "xlsx" ? "xlsx" : "csv";

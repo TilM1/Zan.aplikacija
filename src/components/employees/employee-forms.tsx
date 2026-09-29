@@ -7,15 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
 import { useSubmit } from "@/components/shared/use-submit";
-import { createEmployee, setAgentRate, setCallerMultiplier, setEmployeePassword, updateEmployee } from "@/server/actions/employees";
+import { changeEmployeeEmail, createEmployee, setAgentRate, setCallerMultiplier, setEmployeePassword, updateEmployee } from "@/server/actions/employees";
 import { ROLE_LABELS } from "@/lib/labels";
 import type { Role } from "@/types/domain";
 
+/** 14-char temporary password with letters and digits (meets the password policy). */
 function randomPassword() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  const letters = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz";
+  const digits = "23456789";
   const arr = new Uint32Array(14);
   crypto.getRandomValues(arr);
-  return Array.from(arr, (n) => chars[n % chars.length]).join("");
+  const chars = Array.from(arr, (n, i) => (i % 4 === 3 ? digits[n % digits.length] : letters[n % letters.length]));
+  return chars.join("");
 }
 
 export function CreateEmployeeButton() {
@@ -67,7 +70,7 @@ export function CreateEmployeeButton() {
       >
         {created ? (
           <div className="flex flex-col gap-2 text-sm">
-            <p>Posredujte zaposlenemu prijavne podatke (varno, ne po javnih kanalih). Geslo lahko spremeni v svojem profilu.</p>
+            <p>Posredujte zaposlenemu prijavne podatke osebno ali po telefonu (ne po e-pošti ali javnih kanalih). Ob prvi prijavi mora začasno geslo obvezno zamenjati s svojim – do takrat ne vidi nobenih podatkov.</p>
             <div className="rounded-md bg-subtle p-3 font-mono text-[13px]">
               <p>E-pošta: {created.email}</p>
               <p>Začetno geslo: {created.password}</p>
@@ -109,7 +112,7 @@ export function CreateEmployeeButton() {
                 <Input inputMode="decimal" value={v.rate_percent} onChange={(e) => set("rate_percent", e.target.value)} placeholder="npr. 10" />
               </Field>
             )}
-            <Field label="Začetno geslo" required error={fieldErrors.password} className="sm:col-span-6" hint="Samodejno ustvarjeno – lahko ga spremenite.">
+            <Field label="Začasno geslo" required error={fieldErrors.password} className="sm:col-span-6" hint="Samodejno ustvarjeno. Zaposleni ga mora ob prvi prijavi zamenjati.">
               <Input value={v.password} onChange={(e) => set("password", e.target.value)} className="font-mono" />
             </Field>
           </div>
@@ -219,13 +222,19 @@ export function RateForm({ employeeId, kind, current }: { employeeId: string; ki
 }
 
 export function PasswordReset({ userId }: { userId: string }) {
-  const { submit, pending, error } = useSubmit();
+  const { submit, pending, error, fieldErrors } = useSubmit();
   const [pw, setPw] = useState("");
+  const [done, setDone] = useState<string | null>(null);
   return (
     <div className="flex flex-col gap-2">
-      <FormError message={error} />
+      <FormError message={error ?? fieldErrors.password} />
+      {done && (
+        <p className="rounded-md bg-success-soft px-3 py-2 text-xs text-success">
+          Začasno geslo: <b className="font-mono">{done}</b> – posredujte ga zaposlenemu. Vse njegove seje so odjavljene; ob prijavi mora geslo zamenjati.
+        </p>
+      )}
       <div className="flex items-end gap-2">
-        <Field label="Novo geslo" className="flex-1">
+        <Field label="Novo začasno geslo" className="flex-1">
           <Input value={pw} onChange={(e) => setPw(e.target.value)} className="font-mono" />
         </Field>
         <Button variant="secondary" onClick={() => setPw(randomPassword())}>
@@ -236,12 +245,45 @@ export function PasswordReset({ userId }: { userId: string }) {
           disabled={pw.length < 10}
           onClick={async () => {
             const res = await submit(() => setEmployeePassword({ user_id: userId, password: pw }));
-            if (res?.ok) setPw("");
+            if (res?.ok) {
+              setDone(pw);
+              setPw("");
+            }
           }}
         >
           Nastavi
         </Button>
       </div>
+    </div>
+  );
+}
+
+export function EmailForm({ userId, current }: { userId: string; current: string }) {
+  const router = useRouter();
+  const { submit, pending, error, fieldErrors } = useSubmit();
+  const [email, setEmail] = useState(current);
+  const placeholder = current.endsWith(".invalid");
+  return (
+    <div className="flex flex-col gap-2">
+      {placeholder && <p className="rounded-md bg-warning-soft px-3 py-2 text-xs text-warning">Začasni naslov – vpišite pravi e-poštni naslov za prijavo.</p>}
+      <FormError message={error ?? fieldErrors.email} />
+      <div className="flex items-end gap-2">
+        <Field label="E-pošta za prijavo" className="flex-1">
+          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </Field>
+        <Button
+          variant="secondary"
+          loading={pending}
+          disabled={email.trim().toLowerCase() === current}
+          onClick={async () => {
+            const res = await submit(() => changeEmployeeEmail({ user_id: userId, email }));
+            if (res?.ok) router.refresh();
+          }}
+        >
+          Spremeni
+        </Button>
+      </div>
+      <p className="text-xs text-ink-3">Po spremembi se zaposleni prijavlja z novim naslovom; geslo ostane isto.</p>
     </div>
   );
 }

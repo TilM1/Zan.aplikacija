@@ -424,6 +424,44 @@ describe("row level security", () => {
   });
 });
 
+describe("security hardening", () => {
+  it("a temporary password gives no data access until the user sets their own", async () => {
+    const temp = { app_metadata: { must_change_password: true } };
+    expect(await db.asUser(owner, `select id from customers`, [], temp)).toHaveLength(0);
+    expect(await db.asUser(owner, `select id from commission_installments`, [], temp)).toHaveLength(0);
+    expect(await db.asUser(owner, `select id from profiles where id <> $1`, [owner], temp)).toHaveLength(0);
+    // own profile stays readable (needed to show the "set your password" screen)
+    expect(await db.asUser(owner, `select id from profiles where id = $1`, [owner], temp)).toHaveLength(1);
+    // after the change (flag false) access is back
+    expect((await db.asUser(owner, `select id from customers`, [], { app_metadata: { must_change_password: false } })).length).toBeGreaterThan(0);
+  });
+
+  it("locks an e-mail after 5 failed logins and an IP after 30", async () => {
+    const ok = async (email: string, ip: string) => (await db.one<{ a: boolean }>(`select public.crm_login_allowed($1, $2) a`, [email, ip])).a;
+    for (let i = 0; i < 5; i++) await db.rpc("crm_login_record", { p_email: "victim@x.si", p_ip: `10.0.0.${i}`, p_success: false });
+    expect(await ok("victim@x.si", "10.9.9.9")).toBe(false);
+    expect(await ok("other@x.si", "10.9.9.9")).toBe(true);
+    for (let i = 0; i < 30; i++) await db.rpc("crm_login_record", { p_email: `spray${i}@x.si`, p_ip: "6.6.6.6", p_success: false });
+    expect(await ok("fresh@x.si", "6.6.6.6")).toBe(false);
+    // success clears the e-mail counter
+    await db.query(`delete from login_attempts where email = 'victim@x.si'`);
+    expect(await ok("victim@x.si", "10.9.9.9")).toBe(true);
+    // browsers cannot read login attempts
+    await expect(db.asUser(owner, `select * from login_attempts`)).rejects.toThrow(/permission denied/);
+  });
+
+  it("only the owner can revoke someone else's sessions; e-mail must stay unique", async () => {
+    await db.query(`insert into auth.sessions (user_id) values ($1)`, [agentLuka]);
+    await expect(db.rpc("crm_revoke_sessions", { p_actor: agentMarko, p_user_id: agentLuka })).rejects.toThrow(/lastnik/);
+    await db.rpc("crm_revoke_sessions", { p_actor: owner, p_user_id: agentLuka });
+    expect(await db.query(`select 1 from auth.sessions where user_id = $1`, [agentLuka])).toHaveLength(0);
+
+    await expect(db.rpc("crm_update_employee", { p_actor: owner, p_user_id: agentLuka, p_changes: { email: "marko@test.local" } })).rejects.toThrow(/že uporablja/);
+    await db.rpc("crm_update_employee", { p_actor: owner, p_user_id: agentLuka, p_changes: { email: "Luka.New@Test.local" } });
+    expect((await db.one<{ email: string }>(`select email from profiles where id = $1`, [agentLuka])).email).toBe("luka.new@test.local");
+  });
+});
+
 describe("demo purge", () => {
   it("removes only demo data and leaves real data untouched", async () => {
     const demoCaller = await db.createUser("caller", "Democaller", undefined, { isDemo: true });

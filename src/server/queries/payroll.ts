@@ -1,5 +1,8 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { parseSort } from "@/lib/url";
+
+export const LEDGER_SORTS = ["due_date", "beneficiary_id", "beneficiary_type", "installment_number", "amount", "status", "paid_at"] as const;
 import type { Commission, Installment, Policy } from "@/types/domain";
 
 export type LedgerRow = Installment & {
@@ -19,6 +22,7 @@ export interface LedgerFilters {
   from?: string; // due_date >=
   to?: string; // due_date <=
   today: string;
+  sort?: string;
   page: number;
   pageSize: number;
 }
@@ -46,13 +50,15 @@ export async function listLedger(f: LedgerFilters) {
   if (f.type) q = q.eq("beneficiary_type", f.type);
   if (f.from) q = q.gte("due_date", f.from);
   if (f.to) q = q.lte("due_date", f.to);
+  const s = parseSort(f.sort, LEDGER_SORTS, f.status === "paid" ? "-paid_at" : "due_date");
   q = q
-    .order(f.status === "paid" ? "paid_at" : "due_date", { ascending: f.status !== "paid" })
+    .order(s.column, { ascending: s.ascending, nullsFirst: false })
+    .order("due_date")
     .order("installment_number")
     .range((f.page - 1) * f.pageSize, f.page * f.pageSize - 1);
   const { data, count, error } = await q;
   if (error) throw error;
-  return { rows: (data ?? []) as LedgerRow[], total: count ?? 0 };
+  return { rows: (data ?? []) as LedgerRow[], total: count ?? 0, sort: s.sort };
 }
 
 export type InstallmentLite = Pick<Installment, "id" | "beneficiary_id" | "beneficiary_type" | "amount" | "due_date" | "status" | "installment_number" | "paid_at">;

@@ -1,5 +1,20 @@
 # Deployment: GitHub → Vercel → Supabase
 
+## Environments
+
+| | Production | Staging (test) |
+|---|---|---|
+| Git branch | `main` | `develop` (or any feature branch) |
+| Vercel | Production deployment (your domain) | Preview deployment (`…-git-develop-….vercel.app`) |
+| Supabase | production project (real data) | separate staging project (demo data only) |
+| Vercel env vars | scope **Production** → prod keys | scope **Preview** → staging keys |
+| `.env.local` (your computer) | ✗ never point local dev at production | ✔ staging keys |
+
+Workflow: change code on `develop` → push → test on the Preview URL (staging database) → merge `develop` into `main` → production deploys automatically. Database changes: `npm run db:migrate` against staging first, then production (switch `SUPABASE_DB_URL`).
+
+Protect preview URLs: Vercel → Settings → Deployment Protection → **Vercel Authentication** for Preview.
+
+
 ## 1. Supabase (production project)
 
 - Use a **dedicated project** for the CRM, not shared with other apps (GDPR, and because auth users and triggers are project-wide). Choose an EU region (e.g. `eu-central-1`, Frankfurt).

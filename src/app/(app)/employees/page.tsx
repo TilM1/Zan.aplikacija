@@ -7,18 +7,41 @@ import { formatDate } from "@/lib/dates";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/misc";
-import { Table, TD, TH, THead, TR } from "@/components/ui/table";
+import { SortTH, Table, TD, TH, THead, TR } from "@/components/ui/table";
+import { hrefWith, param, parseSort } from "@/lib/url";
 import { CreateEmployeeButton } from "@/components/employees/employee-forms";
 import { getPeople, getVisibleCommissionRates } from "@/server/queries/people";
 import { currentMonthRange, policyProduction } from "@/server/queries/metrics";
 
 export const metadata: Metadata = { title: "Zaposleni" };
 
-export default async function EmployeesPage() {
+export default async function EmployeesPage({ searchParams }: PageProps<"/employees">) {
   await requireSession(["owner"]);
+  const sp = await searchParams;
   const m = currentMonthRange();
   const [people, rates, prod] = await Promise.all([getPeople(), getVisibleCommissionRates(), policyProduction(m.from, m.to)]);
-  const list = [...people.values()].sort((a, b) => Number(b.is_active) - Number(a.is_active) || a.role.localeCompare(b.role) || a.first_name.localeCompare(b.first_name));
+  const s = parseSort(param(sp, "sort"), ["name", "role", "email", "rate", "count", "premium", "status", "created_at"] as const, "status");
+  const sortProps = { sort: s.sort, hrefFor: (x: string) => hrefWith("/employees", sp, { sort: x }) };
+  const aggOf = (id: string, role: string) => (role === "caller" ? prod.byCaller.get(id) : prod.byAgent.get(id));
+  const rateOf = (id: string, role: string) => Number((role === "caller" ? rates.callers[id] : rates.agents[id]) ?? -1);
+  const keyOf = (p: (typeof all)[number]): string | number => {
+    switch (s.column) {
+      case "name": return `${p.last_name} ${p.first_name}`.toLowerCase();
+      case "role": return p.role;
+      case "email": return p.email;
+      case "rate": return rateOf(p.id, p.role);
+      case "count": return aggOf(p.id, p.role)?.count ?? 0;
+      case "premium": return aggOf(p.id, p.role)?.premiumCents ?? 0;
+      case "created_at": return p.created_at;
+      default: return p.is_active ? 0 : 1;
+    }
+  };
+  const all = [...people.values()];
+  const list = all.sort((a, b) => {
+    const ka = keyOf(a), kb = keyOf(b);
+    const cmp = typeof ka === "number" && typeof kb === "number" ? ka - kb : String(ka).localeCompare(String(kb), "sl");
+    return (s.ascending ? cmp : -cmp) || a.first_name.localeCompare(b.first_name, "sl");
+  });
 
   return (
     <>
@@ -27,15 +50,15 @@ export default async function EmployeesPage() {
         <Table>
           <THead>
             <tr>
-              <TH>Ime</TH>
-              <TH>Vloga</TH>
-              <TH>E-pošta</TH>
+              <SortTH label="Ime" column="name" {...sortProps} />
+              <SortTH label="Vloga" column="role" {...sortProps} />
+              <SortTH label="E-pošta" column="email" {...sortProps} />
               <TH>Telefon</TH>
-              <TH className="text-right">Provizija</TH>
-              <TH className="text-right">Police (ta mesec)</TH>
-              <TH className="text-right">Premija (ta mesec)</TH>
-              <TH>Status</TH>
-              <TH>Od</TH>
+              <SortTH label="Provizija" column="rate" firstDesc className="text-right" {...sortProps} />
+              <SortTH label="Police (ta mesec)" column="count" firstDesc className="text-right" {...sortProps} />
+              <SortTH label="Premija (ta mesec)" column="premium" firstDesc className="text-right" {...sortProps} />
+              <SortTH label="Status" column="status" {...sortProps} />
+              <SortTH label="Od" column="created_at" {...sortProps} />
             </tr>
           </THead>
           <tbody>

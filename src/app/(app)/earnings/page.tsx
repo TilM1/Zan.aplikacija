@@ -8,7 +8,8 @@ import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader, Pagination, Stat, Tabs } from "@/components/ui/misc";
 import { LedgerTable } from "@/components/payroll/ledger-table";
 import { ByMonthCard, summarize } from "@/components/payroll/summaries";
-import { getInstallmentsForSummary, listLedger, type LedgerFilters } from "@/server/queries/payroll";
+import { getInstallmentsForSummary, LEDGER_SORTS, listLedger, type LedgerFilters } from "@/server/queries/payroll";
+import { buildSortHrefs } from "@/lib/sort-links";
 import { getPeople } from "@/server/queries/people";
 
 export const metadata: Metadata = { title: "Moji zaslužki" };
@@ -21,8 +22,8 @@ export default async function EarningsPage({ searchParams }: PageProps<"/earning
   const today = todayIso();
   const status = (param(sp, "status") ?? "unpaid") as LedgerFilters["status"];
   const page = pageParam(sp);
-  const [{ rows, total }, all, people] = await Promise.all([
-    listLedger({ status, beneficiary: profile.id, today, page, pageSize: PAGE_SIZE }),
+  const [{ rows, total, sort }, all, people] = await Promise.all([
+    listLedger({ status, beneficiary: profile.id, today, sort: param(sp, "sort"), page, pageSize: PAGE_SIZE }),
     getInstallmentsForSummary({ beneficiary: profile.id }),
     getPeople(),
   ]);
@@ -57,7 +58,7 @@ export default async function EarningsPage({ searchParams }: PageProps<"/earning
       />
       <div className="grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          {rows.length === 0 ? <EmptyState title="Ni zapisov" /> : <LedgerTable rows={rows} names={names} canMarkPaid={false} showBeneficiary={false} />}
+          {rows.length === 0 ? <EmptyState title="Ni zapisov" /> : <LedgerTable rows={rows} names={names} canMarkPaid={false} showBeneficiary={false} sort={sort} sortHrefs={buildSortHrefs("/earnings", sp, LEDGER_SORTS)} />}
           <div className="border-t border-line">
             <Pagination page={page} pageSize={PAGE_SIZE} total={total} hrefFor={(p) => hrefWith("/earnings", sp, { page: p })} />
           </div>

@@ -3,11 +3,11 @@ import Link from "next/link";
 import { PhoneCall } from "lucide-react";
 import { requireSession } from "@/lib/auth";
 import { daysBetween, formatDate, formatDateTime, localParts, todayIso } from "@/lib/dates";
-import { hrefWith, isUuid, pageParam, param } from "@/lib/url";
+import { hrefWith, isUuid, pageParam, param, parseSort } from "@/lib/url";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader, Pagination, Tabs } from "@/components/ui/misc";
-import { Table, TD, TH, THead, TR } from "@/components/ui/table";
+import { SortTH, Table, TD, TH, THead, TR } from "@/components/ui/table";
 import { FollowupStatusBadge } from "@/components/ui/status";
 import { FilterBar } from "@/components/pipeline/filter-bar";
 import { FollowupActions } from "@/components/customers/followup-actions";
@@ -41,7 +41,9 @@ export default async function FollowupsPage({ searchParams }: PageProps<"/follow
       "id, status, caller_id, note, created_at, resolved_at, customer:customers!inner(id, first_name, last_name, phone, city, postal_code), source:appointments!caller_followups_source_appointment_id_fkey(id, agent_id, scheduled_at, visit_number, result_note)",
       { count: "exact" },
     );
-  q = tab === "open" ? q.eq("status", "open").order("created_at") : q.neq("status", "open").order("resolved_at", { ascending: false });
+  const s = parseSort(param(sp, "sort"), ["created_at", "resolved_at", "status", "caller_id"] as const, tab === "open" ? "created_at" : "-resolved_at");
+  q = (tab === "open" ? q.eq("status", "open") : q.neq("status", "open")).order(s.column, { ascending: s.ascending, nullsFirst: false });
+  const sortProps = { sort: s.sort, hrefFor: (x: string) => hrefWith("/follow-ups", sp, { sort: x, page: undefined }) };
   if (profile.role === "caller") q = q.eq("caller_id", profile.id);
   else if (isUuid(param(sp, "caller"))) q = q.eq("caller_id", param(sp, "caller")!);
   const { data, count } = await q.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
@@ -59,8 +61,8 @@ export default async function FollowupsPage({ searchParams }: PageProps<"/follow
       <Tabs
         active={tab}
         tabs={[
-          { key: "open", label: "Za klic", href: hrefWith("/follow-ups", sp, { tab: undefined, page: undefined }) },
-          { key: "done", label: "Zaključeni", href: hrefWith("/follow-ups", sp, { tab: "done", page: undefined }) },
+          { key: "open", label: "Za klic", href: hrefWith("/follow-ups", sp, { tab: undefined, page: undefined, sort: undefined }) },
+          { key: "done", label: "Zaključeni", href: hrefWith("/follow-ups", sp, { tab: "done", page: undefined, sort: undefined }) },
         ]}
       />
       <Card>
@@ -75,9 +77,9 @@ export default async function FollowupsPage({ searchParams }: PageProps<"/follow
                 <TH>Kraj</TH>
                 <TH>Neuspešen obisk</TH>
                 <TH>Zastopnik</TH>
-                {profile.role === "owner" && <TH>Klicatelj</TH>}
+                {profile.role === "owner" && <SortTH label="Klicatelj" column="caller_id" {...sortProps} />}
                 <TH>Opomba zastopnika</TH>
-                {tab === "open" ? <TH>Čaka</TH> : <TH>Status</TH>}
+                {tab === "open" ? <SortTH label="Čaka" column="created_at" {...sortProps} /> : <SortTH label="Zaključeno" column="resolved_at" firstDesc {...sortProps} />}
                 {tab === "open" && <TH className="text-right">Dejanja</TH>}
               </tr>
             </THead>

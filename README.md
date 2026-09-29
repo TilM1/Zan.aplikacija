@@ -11,6 +11,7 @@ UI language: Slovenian. Code and docs: English.
 | Roles & permission matrix | [docs/PERMISSIONS.md](docs/PERMISSIONS.md) |
 | Commission formulas & payout timing | [docs/COMMISSIONS.md](docs/COMMISSIONS.md) |
 | GitHub → Vercel → Supabase deployment | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
+| Security measures & settings | [docs/SECURITY.md](docs/SECURITY.md) |
 | Backups, recovery, CSV/XLSX export | [docs/BACKUP_AND_RECOVERY.md](docs/BACKUP_AND_RECOVERY.md) |
 | Future Outlook calendar sync | [docs/OUTLOOK_INTEGRATION.md](docs/OUTLOOK_INTEGRATION.md) |
 
@@ -25,9 +26,7 @@ npm install
 cp .env.example .env.local        # fill in the values (see below)
 ```
 
-1. **Apply database migrations** (in order) from `supabase/migrations/`:
-   - Supabase CLI: `npx supabase link --project-ref <ref>` then `npx supabase db push`, **or**
-   - paste each file into Supabase Dashboard → SQL Editor, in filename order.
+1. **Apply database migrations**: `npm run db:migrate` (needs `SUPABASE_DB_URL`), or paste each file from `supabase/migrations/` into the SQL Editor in filename order.
 2. **Create the first Owner** (only an Owner can create other employees):
    ```bash
    npm run create-owner -- owner@company.si "Ime" "Priimek" 15
@@ -54,7 +53,9 @@ cp .env.example .env.local        # fill in the values (see below)
 | `npm run dev` / `build` / `start` | Next.js |
 | `npm run check` | typecheck + lint + all tests |
 | `npm test` | Unit tests (commission engine, CSV) + database integration tests (real migrations in PGlite: workflows, constraints, RLS, demo seed/purge) |
-| `npm run create-owner -- …` | Bootstrap the first Owner |
+| `npm run db:migrate` | Apply pending migrations to `SUPABASE_DB_URL` |
+| `npm run db:wipe -- --confirm <ref>` | **Delete all data and users** (staging reset / before go-live) |
+| `npm run create-owner -- …` | Bootstrap the first Owner (temporary password, must be changed at first login) |
 | `npm run demo:generate` | Write `supabase/seed/demo-seed.sql` (dates relative to today) |
 | `npm run demo:seed` / `demo:cleanup` | Apply demo data / remove it (needs `SUPABASE_DB_URL`) |
 | `npm run db:types` | Regenerate Supabase TypeScript types (optional) |
@@ -63,7 +64,7 @@ cp .env.example .env.local        # fill in the values (see below)
 
 ## Demo data
 
-Demo users (all `@demo.zan-crm.si`, password `Demo-Zan-2026!`):
+Demo users (all `@demo.zan-crm.invalid`, password `Demo-Zan-2026!`):
 
 | User | Role | Commission |
 |---|---|---|

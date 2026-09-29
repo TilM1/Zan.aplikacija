@@ -1,5 +1,8 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { parseSort } from "@/lib/url";
+
+export const APPOINTMENT_SORTS = ["scheduled_at", "visit_number", "status", "result", "agent_id", "caller_id", "location", "created_at"] as const;
 import type { AppointmentWithRelations, Profile } from "@/types/domain";
 
 export const APPOINTMENT_SELECT =
@@ -77,10 +80,8 @@ export async function listAppointments(f: AppointmentFilters) {
   if (f.from) q = q.gte("scheduled_at", f.from);
   if (f.to) q = q.lt("scheduled_at", f.to);
 
-  const sort = f.sort ?? "-scheduled_at";
-  const desc = sort.startsWith("-");
-  const col = ["scheduled_at", "visit_number", "created_at"].includes(sort.replace("-", "")) ? sort.replace("-", "") : "scheduled_at";
-  q = q.order(col, { ascending: !desc }).range((f.page - 1) * f.pageSize, f.page * f.pageSize - 1);
+  const s = parseSort(f.sort, APPOINTMENT_SORTS, "-scheduled_at");
+  q = q.order(s.column, { ascending: s.ascending, nullsFirst: false }).order("scheduled_at", { ascending: false }).range((f.page - 1) * f.pageSize, f.page * f.pageSize - 1);
 
   const { data, count, error } = await q;
   if (error) throw error;

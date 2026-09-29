@@ -17,7 +17,8 @@ import { buildPoliciesPayload, type PolicyEntry } from "../../src/lib/commission
 import { addDays, localDateTimeToIso, todayIso } from "../../src/lib/dates";
 
 export const DEMO_PASSWORD = "Demo-Zan-2026!";
-export const DEMO_EMAIL_DOMAIN = "demo.zan-crm.si";
+// .invalid is reserved (RFC 2606): nobody can ever receive mail for these addresses.
+export const DEMO_EMAIL_DOMAIN = "demo.zan-crm.invalid";
 
 type Role = "owner" | "agent" | "caller";
 type Result = "A" | "A0" | "A1" | "B";
@@ -79,6 +80,9 @@ export function generateDemoSeed(today = todayIso()): string {
   sql(`do $$ begin
   if exists (select 1 from public.profiles where is_demo) then
     raise exception 'Demo data already exists. Run supabase/seed/demo-cleanup.sql first.';
+  end if;
+  if exists (select 1 from public.profiles where not is_demo) then
+    raise exception 'This database has real users (production?). Demo data can only be loaded into an empty/staging database.';
   end if;
 end $$;`);
 

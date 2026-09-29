@@ -6,7 +6,7 @@ import { formatDecimalEur, formatEur, sumDecimals } from "@/lib/money";
 import { hrefWith, isUuid, pageParam, param } from "@/lib/url";
 import { Card } from "@/components/ui/card";
 import { EmptyState, PageHeader, Pagination } from "@/components/ui/misc";
-import { Table, TD, TH, THead, TR } from "@/components/ui/table";
+import { SortTH, Table, TD, TH, THead, TR } from "@/components/ui/table";
 import { FilterBar, type FilterDef } from "@/components/pipeline/filter-bar";
 import { listPolicies, getAllProducts } from "@/server/queries/policies";
 import { getAgents, getCallers, getPeople, nameOf, toOptions } from "@/server/queries/people";
@@ -20,7 +20,7 @@ export default async function PoliciesPage({ searchParams }: PageProps<"/policie
   const page = pageParam(sp);
   const isOwner = profile.role === "owner";
   const agentParam = param(sp, "agent");
-  const [{ rows, total }, people, products, agents, callers] = await Promise.all([
+  const [{ rows, total, sort }, people, products, agents, callers] = await Promise.all([
     listPolicies({
       q: param(sp, "q"),
       product: isUuid(param(sp, "product")) ? param(sp, "product") : undefined,
@@ -28,6 +28,7 @@ export default async function PoliciesPage({ searchParams }: PageProps<"/policie
       caller: isUuid(param(sp, "caller")) ? param(sp, "caller") : undefined,
       from: param(sp, "from"),
       to: param(sp, "to"),
+      sort: param(sp, "sort"),
       page,
       pageSize: PAGE_SIZE,
     }),
@@ -36,6 +37,8 @@ export default async function PoliciesPage({ searchParams }: PageProps<"/policie
     getAgents({ includeInactive: true }),
     getCallers({ includeInactive: true }),
   ]);
+
+  const sortProps = { sort, hrefFor: (s: string) => hrefWith("/policies", sp, { sort: s, page: undefined }) };
 
   const filters: FilterDef[] = [
     { key: "q", label: "Iskanje", type: "search", placeholder: "Stranka ali št. police…" },
@@ -57,14 +60,14 @@ export default async function PoliciesPage({ searchParams }: PageProps<"/policie
           <Table>
             <THead>
               <tr>
-                <TH>Datum</TH>
+                <SortTH label="Datum" column="policy_date" firstDesc {...sortProps} />
                 <TH>Stranka</TH>
-                <TH>Produkt</TH>
-                <TH>Št. police</TH>
-                <TH className="text-right">Mesečna premija</TH>
-                <TH className="text-right">Trajanje</TH>
-                <TH>Zastopnik</TH>
-                <TH>Klicatelj</TH>
+                <SortTH label="Produkt" column="product_name" {...sortProps} />
+                <SortTH label="Št. police" column="policy_number" {...sortProps} />
+                <SortTH label="Mesečna premija" column="monthly_premium" firstDesc className="text-right" {...sortProps} />
+                <SortTH label="Trajanje" column="duration_years" firstDesc className="text-right" {...sortProps} />
+                <SortTH label="Zastopnik" column="agent_id" {...sortProps} />
+                <SortTH label="Klicatelj" column="caller_id" {...sortProps} />
               </tr>
             </THead>
             <tbody>

@@ -12,7 +12,7 @@ import { isUuid } from "@/lib/url";
  */
 export async function GET(_req: Request, ctx: RouteContext<"/api/documents/[id]">) {
   const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session || session.mustChangePassword) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await ctx.params;
   if (!isUuid(id)) return NextResponse.json({ error: "Not found" }, { status: 404 });
 

@@ -42,7 +42,7 @@ export function ChangePasswordForm() {
       <div className="sm:col-span-2">
         <FormError message={error} />
       </div>
-      <Field label="Novo geslo" error={fieldErrors.password} hint="Vsaj 10 znakov">
+      <Field label="Novo geslo" error={fieldErrors.password} hint="Vsaj 10 znakov, črke in številke. Ostale naprave bodo odjavljene.">
         <Input type="password" autoComplete="new-password" value={v.password} onChange={(e) => setV({ ...v, password: e.target.value })} />
       </Field>
       <Field label="Ponovite geslo" error={fieldErrors.confirm}>

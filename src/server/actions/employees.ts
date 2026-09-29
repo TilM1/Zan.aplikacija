@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireActor } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { callerMultiplierSchema, employeeSchema, employeeUpdateSchema, ratePercentSchema } from "@/lib/validation";
+import { callerMultiplierSchema, employeeSchema, employeeUpdateSchema, passwordSchema, ratePercentSchema } from "@/lib/validation";
 import { callWorkflow, runAction, WorkflowError, type ActionResult } from "@/server/workflow";
 
 /** Owner creates an employee: Supabase Auth user (with initial password) + CRM profile. */
@@ -18,7 +18,8 @@ export async function createEmployee(input: unknown): Promise<ActionResult<{ use
       email: v.email,
       password: v.password,
       email_confirm: true,
-      app_metadata: { app: "zan_crm" },
+      // Temporary password: the employee must set their own before seeing any data (enforced by RLS)
+      app_metadata: { app: "zan_crm", must_change_password: true },
       user_metadata: { first_name: v.first_name, last_name: v.last_name },
     });
     if (error || !data.user) {
@@ -49,8 +50,8 @@ export async function updateEmployee(input: unknown): Promise<ActionResult> {
     const { user_id, ...changes } = v;
     await callWorkflow("crm_update_employee", { p_actor: userId, p_user_id: user_id, p_changes: changes });
     if (!v.is_active) {
-      // Revoke refresh tokens so a deactivated user is signed out everywhere.
-      await createAdminClient().auth.admin.signOut(user_id).catch(() => undefined);
+      // Revoke all sessions so a deactivated user is signed out everywhere (RLS already denies data).
+      await callWorkflow("crm_revoke_sessions", { p_actor: userId, p_user_id: user_id });
     }
     revalidatePath("/employees");
     revalidatePath(`/employees/${user_id}`);
@@ -83,10 +84,38 @@ export async function setCallerMultiplier(input: unknown): Promise<ActionResult>
 
 export async function setEmployeePassword(input: unknown): Promise<ActionResult> {
   return runAction(async () => {
-    await requireActor(["owner"]);
-    const v = z.object({ user_id: z.string().uuid(), password: z.string().min(10, "Geslo mora imeti vsaj 10 znakov.") }).parse(input);
-    const { error } = await createAdminClient().auth.admin.updateUserById(v.user_id, { password: v.password });
+    const { userId } = await requireActor(["owner"]);
+    const v = z.object({ user_id: z.string().uuid(), password: passwordSchema }).parse(input);
+    if (v.user_id === userId) throw new WorkflowError("Svoje geslo spremenite v Profilu.");
+    // New temporary password: must be changed at next login; existing sessions are revoked.
+    const { error } = await createAdminClient().auth.admin.updateUserById(v.user_id, {
+      password: v.password,
+      app_metadata: { must_change_password: true },
+    });
     if (error) throw new WorkflowError("Gesla ni bilo mogoče nastaviti.");
+    await callWorkflow("crm_revoke_sessions", { p_actor: userId, p_user_id: v.user_id });
     return undefined;
-  }, "Novo geslo je nastavljeno.");
+  }, "Začasno geslo je nastavljeno. Zaposleni ga mora ob prijavi zamenjati.");
+}
+
+/** Change an employee's login e-mail (auth user + profile, audited). */
+export async function changeEmployeeEmail(input: unknown): Promise<ActionResult> {
+  return runAction(async () => {
+    const { userId } = await requireActor(["owner"]);
+    const v = z.object({ user_id: z.string().uuid(), email: z.email("Vnesite veljaven e-poštni naslov.").transform((e) => e.toLowerCase().trim()) }).parse(input);
+    const admin = createAdminClient();
+    const { data: current } = await admin.from("profiles").select("email").eq("id", v.user_id).single();
+    if (!current) throw new WorkflowError("Zaposleni ne obstaja.");
+    if (current.email === v.email) return undefined;
+
+    await callWorkflow("crm_update_employee", { p_actor: userId, p_user_id: v.user_id, p_changes: { email: v.email } });
+    const { error } = await admin.auth.admin.updateUserById(v.user_id, { email: v.email, email_confirm: true });
+    if (error) {
+      await callWorkflow("crm_update_employee", { p_actor: userId, p_user_id: v.user_id, p_changes: { email: current.email } });
+      throw new WorkflowError(error.message?.includes("already") ? "Ta e-poštni naslov je že v uporabi." : "E-pošte ni bilo mogoče spremeniti.");
+    }
+    revalidatePath(`/employees/${v.user_id}`);
+    revalidatePath("/", "layout");
+    return undefined;
+  }, "E-pošta za prijavo je spremenjena.");
 }

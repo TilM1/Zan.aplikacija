@@ -107,3 +107,14 @@ Import runs in the browser: the file is parsed there (`read-excel-file` / `papap
 "Za klic" (due) = `status = new` OR (`callback`/`rejected` AND `next_call_at <= now()`). Rejected leads get `next_call_at = now() + recall months`. Converting a lead calls `crm_create_customer_with_appointment(..., p_lead_id)` in the same transaction.
 
 Phone numbers are normalised identically in SQL (`crm_normalize_phone`, also used for `customers.phone_normalized`) and TypeScript (`src/lib/phone.ts`).
+
+## Skadence (customer expiries)
+
+`customer_expiries` stores other products' expiry dates (category, description, insurer, date, note), assigned to the Agent who recorded them. An expiry is "due" when it is open, `expiry_date <= today + app_settings.expiry_reminder_days` (default 14), and not snoozed. Handled ones can be repeated automatically for next year. Included in customer deletion backups.
+
+## Installable app and notifications
+
+- `src/app/manifest.ts` + `public/icons` make the app installable ("Dodaj na začetni zaslon"). `public/sw.js` handles push notifications only; there is **no offline caching**, so customer and payroll data never lands in the browser cache.
+- Devices subscribe in Profile → "Aplikacija in obvestila" (`push_subscriptions`, VAPID keys in env). On iPhone, push works only when the app is added to the home screen (iOS 16.4+).
+- Event notifications (`src/server/events.ts`, sent after the response via `after()`): new, changed or reassigned appointment → Agent; result B → Caller.
+- Daily summary: Vercel Cron → `GET /api/cron/daily` at 05:30 UTC (Bearer `CRON_SECRET`). It covers appointments today, due skadence, results pending, callbacks due, and open follow-ups.

@@ -26,6 +26,20 @@ total = monthly_premium × caller_multiplier (per caller, default 1.5)
 
 Example with ×1.5: 100 € → **150 €**, due on the same date as the Agent's first installment. With several policies from one consultation, each policy produces its own Agent and Caller commission.
 
+**Products with the "premija × število" model** (e.g. *Specialisti*, set per product in Settings)
+
+```
+agent total = monthly_premium × agent's own number for that product
+```
+
+The Owner sets each Agent's number under Zaposleni → person → "Provizija za Specialiste". It keeps a history and is snapshotted as `commissions.agent_multiplier`. Payout runs over 11 monthly installments from the first payout date (same 24th → 16th rule):
+
+| # | 1 | 2 | 3 | 4 | 5 | 6–11 |
+|---|---|---|---|---|---|---|
+| share | 50 % | 15 % | 10 % | 5 % | 5 % | 2.5 % each |
+
+Example: 30 € × 12 = 360 € → 180, 54, 36, 18, 18, then 6 × 9 €. The Caller commission is unchanged (premium × caller multiplier, once).
+
 ## Payout timing
 
 - Cutoff: the **24th**. Payout day: the **16th**.

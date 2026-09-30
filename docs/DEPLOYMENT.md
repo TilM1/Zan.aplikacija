@@ -37,6 +37,8 @@ Protect preview URLs: Vercel → Settings → Deployment Protection → **Vercel
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
    - `SUPABASE_SECRET_KEY` (keep this unprefixed, so it stays server-only)
+   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (push notifications; generate with `npx web-push generate-vapid-keys`)
+   - `CRON_SECRET` (random string; Vercel sends it to `/api/cron/daily`)
 3. Region: choose one close to the Supabase region (e.g. `fra1`).
 4. Deploy. Every push to `main` deploys to production, and PRs get preview deployments.
    - Point previews at a separate staging Supabase project so previews never touch production data.

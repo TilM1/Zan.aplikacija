@@ -52,6 +52,7 @@ export const NAVIGATION: Record<Role, NavSection[]> = {
       items: [
         { href: "/production", label: "Moja produkcija", icon: "production" },
         { href: "/earnings", label: "Moji zaslužki", icon: "earnings" },
+        { href: "/profile", label: "Profil in obvestila", icon: "profile" },
       ],
     },
   ],
@@ -62,7 +63,7 @@ export const NAVIGATION: Record<Role, NavSection[]> = {
       items: [
         { href: "/production", label: "Moja produkcija", icon: "production" },
         { href: "/earnings", label: "Moji zaslužki", icon: "earnings" },
-        { href: "/profile", label: "Profil", icon: "profile" },
+        { href: "/profile", label: "Profil in obvestila", icon: "profile" },
       ],
     },
   ],
@@ -82,7 +83,7 @@ export const NAVIGATION: Record<Role, NavSection[]> = {
       items: [
         { href: "/production", label: "Moja produkcija", icon: "production" },
         { href: "/earnings", label: "Moji zaslužki", icon: "earnings" },
-        { href: "/profile", label: "Profil", icon: "profile" },
+        { href: "/profile", label: "Profil in obvestila", icon: "profile" },
       ],
     },
   ],

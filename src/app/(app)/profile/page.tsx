@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { KeyValue, PageHeader } from "@/components/ui/misc";
 import { ChangePasswordForm, OwnProfileForm } from "@/components/settings/profile-forms";
+import { AppAndNotifications } from "@/components/pwa/app-and-notifications";
 import { formatDate } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Profil" };
@@ -33,6 +34,12 @@ export default async function ProfilePage() {
               ]}
             />
             <OwnProfileForm initial={{ first_name: profile.first_name, last_name: profile.last_name, phone: profile.phone ?? "" }} />
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader title="Aplikacija in obvestila" description="Namestite CoreMark na telefon in vklopite obvestila." />
+          <CardBody>
+            <AppAndNotifications />
           </CardBody>
         </Card>
         <Card>

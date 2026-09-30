@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { notifyAppointmentAgent, notifyFollowupCaller } from "@/server/events";
 import { requireActor, isAgentLike } from "@/lib/auth";
 import { buildPoliciesPayload } from "@/lib/commission/payload";
 import { localDateTimeToIso } from "@/lib/dates";
@@ -103,6 +105,10 @@ export async function recordResult(input: unknown): Promise<ActionResult<RecordR
       p_policies: policies,
     });
     revalidatePath("/", "layout");
+    after(async () => {
+      await notifyAppointmentAgent(res.next_appointment_id, userId);
+      await notifyFollowupCaller(res.followup_id);
+    });
     return { ...res, customer_id: appt.customer_id };
   }, "Rezultat svetovanja je shranjen.");
 }

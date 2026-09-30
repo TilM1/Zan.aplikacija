@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { notifyAppointmentAgent } from "@/server/events";
 import { z } from "zod";
 import { requireActor } from "@/lib/auth";
 import { localDateTimeToIso } from "@/lib/dates";
@@ -51,6 +53,7 @@ export async function createCustomerWithAppointment(input: unknown): Promise<Act
       p_lead_id: v.lead_id || null,
     });
     revalidatePath("/", "layout");
+    after(() => notifyAppointmentAgent(res.appointment_id, userId));
     return { status: "created", ...res } as const;
   }, "Stranka in termin sta shranjena.");
 }
@@ -95,6 +98,7 @@ export async function scheduleAppointment(input: unknown): Promise<ActionResult<
       },
     });
     revalidatePath("/", "layout");
+    after(() => notifyAppointmentAgent(res.appointment_id, userId));
     return res;
   }, "Nov termin je dogovorjen.");
 }
@@ -114,6 +118,7 @@ export async function updateAppointment(input: unknown): Promise<ActionResult> {
       },
     });
     revalidatePath("/", "layout");
+    after(() => notifyAppointmentAgent(v.appointment_id, userId, "changed"));
     return undefined;
   }, "Termin je posodobljen.");
 }

@@ -12,15 +12,15 @@ export const metadata: Metadata = {
   description: "CoreMark – interni CRM za svetovanje in prodajo zavarovanj",
   robots: { index: false, follow: false },
   applicationName: "CoreMark CRM",
-  appleWebApp: { capable: true, title: "CoreMark", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "CoreMark", statusBarStyle: "default" },
   formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#161616",
+  // iOS keeps its own status bar area (clock/battery) above the app; content starts below it
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
-  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

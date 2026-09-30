@@ -58,7 +58,7 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/export/[data
   try {
     if (dataset === "all") {
       const wb = new ExcelJS.Workbook();
-      wb.creator = "ZAN CRM";
+      wb.creator = "CoreMark CRM";
       wb.created = new Date();
       for (const ds of EXPORT_DATASETS) addSheet(wb, ds.label, await fetchAll(ds, from, to));
       const buf = await wb.xlsx.writeBuffer();

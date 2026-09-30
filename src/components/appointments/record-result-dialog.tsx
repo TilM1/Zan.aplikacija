@@ -244,7 +244,7 @@ function ResultForm({
         <Button variant="secondary" onClick={onDone} disabled={pending || uploading}>
           Prekliči
         </Button>
-        <Button onClick={onSubmit} disabled={!result} loading={pending || uploading}>
+        <Button variant="gold" onClick={onSubmit} disabled={!result} loading={pending || uploading}>
           {uploading ? "Nalagam dokumente…" : result === "A1" ? `Shrani ${policies.length > 1 ? `${policies.length} police` : "polico"}` : "Shrani rezultat"}
         </Button>
       </div>

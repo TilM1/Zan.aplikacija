@@ -57,7 +57,7 @@ export function CustomerActions({
   return (
     <div className="flex flex-wrap gap-2">
       {open?.canRecord && (
-        <Button onClick={() => setMode("result")}>
+        <Button variant="gold" onClick={() => setMode("result")}>
           <ClipboardCheck className="size-4" /> Vnesi rezultat
         </Button>
       )}
@@ -67,7 +67,7 @@ export function CustomerActions({
         </Button>
       )}
       {!open && canSchedule && !customer.archived_at && (
-        <Button onClick={() => setMode("schedule")}>
+        <Button variant="gold" onClick={() => setMode("schedule")}>
           <CalendarPlus className="size-4" /> Nov termin
         </Button>
       )}

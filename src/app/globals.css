@@ -1,31 +1,44 @@
 @import "tailwindcss";
 
+/*
+ * CoreMark palette — from the agency logo:
+ * black (#1C1C1C), gold (#C6A24B) on warm off-white.
+ * "brand" = dark gold for links/accents on light backgrounds (AA contrast),
+ * "gold" = logo gold for highlights, focus and key actions (with dark text).
+ */
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-brand: var(--font-montserrat), var(--font-inter), ui-sans-serif, sans-serif;
 
-  --color-canvas: #f6f7f9;
+  --color-canvas: #f7f6f2;
   --color-surface: #ffffff;
-  --color-subtle: #f1f3f5;
-  --color-line: #e3e6ea;
-  --color-line-strong: #cfd4da;
-  --color-ink: #16191d;
-  --color-ink-2: #4a525c;
-  --color-ink-3: #7a838e;
+  --color-subtle: #f3f1ec;
+  --color-line: #e7e3da;
+  --color-line-strong: #d4cfc3;
+  --color-ink: #1c1c1c;
+  --color-ink-2: #45443f;
+  --color-ink-3: #77736a;
 
-  --color-brand: #1f3a5f;
-  --color-brand-hover: #182f4d;
-  --color-brand-soft: #e8eef6;
+  --color-brand: #8a6a1f;
+  --color-brand-hover: #6f5518;
+  --color-brand-soft: #f7f0dc;
 
-  --color-info: #2457a6;
-  --color-info-soft: #e7eefa;
-  --color-success: #1d7a4b;
-  --color-success-soft: #e4f4ea;
-  --color-warning: #9a5b00;
-  --color-warning-soft: #fdf1dc;
+  --color-gold: #c6a24b;
+  --color-gold-hover: #b38f3a;
+  --color-gold-soft: #faf5e6;
+
+  --color-sidebar: #161616;
+
+  --color-info: #2a5aa0;
+  --color-info-soft: #e9f0fa;
+  --color-success: #1e7a4c;
+  --color-success-soft: #e5f4eb;
+  --color-warning: #9a5a00;
+  --color-warning-soft: #fdf1db;
   --color-danger: #b42318;
   --color-danger-soft: #fdecea;
-  --color-accent: #6941c6;
-  --color-accent-soft: #f0ebfb;
+  --color-accent: #6b46c1;
+  --color-accent-soft: #f1ecfb;
 }
 
 @layer base {
@@ -35,17 +48,20 @@
   body {
     background: var(--color-canvas);
     color: var(--color-ink);
-    font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
   }
+  h1,
+  h2 {
+    font-family: var(--font-brand);
+  }
   ::selection {
-    background: var(--color-brand-soft);
+    background: var(--color-gold-soft);
   }
   dialog::backdrop {
-    background: rgb(16 20 26 / 0.45);
+    background: rgb(20 20 20 / 0.5);
   }
   :focus-visible {
-    outline: 2px solid var(--color-brand);
+    outline: 2px solid var(--color-gold);
     outline-offset: 2px;
   }
 }

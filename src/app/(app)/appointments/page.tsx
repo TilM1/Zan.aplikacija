@@ -65,7 +65,7 @@ export default async function AppointmentsPage({ searchParams }: PageProps<"/app
         title={profile.role === "caller" ? "Moji termini" : "Termini"}
         description={profile.role === "caller" ? "Termini, ki ste jih dogovorili, in njihovi rezultati" : undefined}
         actions={
-          <Link href="/appointments/new" className={buttonClasses()}>
+          <Link href="/appointments/new" className={buttonClasses("gold")}>
             Nov termin
           </Link>
         }

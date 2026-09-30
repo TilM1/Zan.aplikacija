@@ -107,7 +107,7 @@ export function ConfirmDialog({
             disabled={loading}
             className={cn(
               "h-9 rounded-md px-3.5 text-sm font-medium text-white disabled:opacity-50",
-              tone === "danger" ? "bg-danger hover:bg-danger/90" : "bg-brand hover:bg-brand-hover",
+              tone === "danger" ? "bg-danger hover:bg-danger/90" : "bg-ink hover:bg-black",
             )}
           >
             {loading ? "Shranjujem…" : confirmLabel}

@@ -10,16 +10,16 @@ export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>)
   );
 }
 export function THead(props: HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className="bg-subtle/60 text-left" {...props} />;
+  return <thead className="bg-subtle text-left" {...props} />;
 }
 export function TH({ className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
-  return <th className={cn("border-b border-line px-3 py-2 text-xs font-medium whitespace-nowrap text-ink-3", className)} {...props} />;
+  return <th className={cn("border-b border-line px-3 py-2.5 text-xs font-semibold tracking-wide whitespace-nowrap text-ink-2 uppercase", className)} {...props} />;
 }
 export function TR({ className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn("border-b border-line last:border-0 hover:bg-subtle/50", className)} {...props} />;
+  return <tr className={cn("border-b border-line last:border-0 hover:bg-gold-soft/60", className)} {...props} />;
 }
 export function TD({ className, ...props }: TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn("px-3 py-2 align-middle", className)} {...props} />;
+  return <td className={cn("px-3 py-2.5 align-middle", className)} {...props} />;
 }
 
 /**

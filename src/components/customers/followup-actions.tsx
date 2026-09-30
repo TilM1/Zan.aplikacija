@@ -31,7 +31,7 @@ export function FollowupActions({
 
   return (
     <div className="flex justify-end gap-1.5">
-      <Button size="sm" onClick={() => setMode("schedule")}>
+      <Button size="sm" variant="gold" onClick={() => setMode("schedule")}>
         <CalendarPlus className="size-3.5" /> Nov termin
       </Button>
       <Button size="sm" variant="ghost" onClick={() => setMode("close")} title="Zapri brez termina">

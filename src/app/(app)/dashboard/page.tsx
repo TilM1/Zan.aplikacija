@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
-import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { todayIso, formatDate } from "@/lib/dates";
 import { DASHBOARD_LAYOUT, type WidgetKey } from "@/config/dashboard";
 import { PageHeader } from "@/components/ui/misc";
-import { buttonClasses } from "@/components/ui/button";
+import { QuickActions } from "@/components/dashboard/quick-actions";
 import {
   FollowupsWidget, KpisWidget, ObligationsWidget, ProductionByAgentWidget, ProductionByCallerWidget,
   RecentActivityWidget, ResultsWidget, TodayWidget, UpcomingPayoutsWidget, UpcomingWidget, type WidgetContext,
@@ -14,6 +13,7 @@ import {
 export const metadata: Metadata = { title: "Nadzorna plošča" };
 
 const WIDGETS: Record<WidgetKey, (ctx: WidgetContext) => ReactNode> = {
+  quickActions: (ctx) => <QuickActions profile={ctx.profile} />,
   kpis: (ctx) => <KpisWidget ctx={ctx} />,
   today: (ctx) => <TodayWidget ctx={ctx} />,
   upcoming: (ctx) => <UpcomingWidget ctx={ctx} />,
@@ -45,14 +45,12 @@ export default async function DashboardPage() {
       <PageHeader
         title={`Pozdravljeni, ${profile.first_name}`}
         description={`${formatDate(today)} · ${profile.role === "owner" ? "pregled celotnega poslovanja" : "vaš pregled"}`}
-        actions={
-          profile.role !== "agent" && (
-            <Link href="/appointments/new" className={buttonClasses("primary")}>
-              Nov termin
-            </Link>
-          )
-        }
       />
+      <div className="mb-5 flex flex-col gap-4">
+        {layout.top.map((k) => (
+          <WidgetSlot key={k}>{WIDGETS[k](ctx)}</WidgetSlot>
+        ))}
+      </div>
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-4 xl:col-span-2">
           {layout.main.map((k) => (

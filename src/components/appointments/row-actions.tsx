@@ -23,16 +23,16 @@ export function AppointmentRowActions({
   return (
     <div className="flex justify-end gap-1">
       {card.canRecord && (
-        <button onClick={() => setMode("result")} className="h-7 rounded border border-brand/30 bg-brand-soft px-2 text-xs font-medium text-brand hover:bg-brand hover:text-white">
-          Rezultat
+        <button onClick={() => setMode("result")} className="h-8 rounded-md bg-gold px-2.5 text-xs font-semibold text-ink hover:bg-gold-hover">
+          Vnesi rezultat
         </button>
       )}
       {card.canEdit && (
         <>
-          <button onClick={() => setMode("edit")} className="grid size-7 place-items-center rounded border border-line text-ink-3 hover:bg-subtle hover:text-ink" title="Prestavi / prerazporedi" aria-label="Uredi">
+          <button onClick={() => setMode("edit")} className="grid size-8 place-items-center rounded-md border border-line text-ink-3 hover:bg-subtle hover:text-ink" title="Prestavi / prerazporedi" aria-label="Uredi">
             <Pencil className="size-3.5" />
           </button>
-          <button onClick={() => setMode("cancel")} className="grid size-7 place-items-center rounded border border-line text-ink-3 hover:bg-danger-soft hover:text-danger" title="Prekliči termin" aria-label="Prekliči">
+          <button onClick={() => setMode("cancel")} className="grid size-8 place-items-center rounded-md border border-line text-ink-3 hover:bg-danger-soft hover:text-danger" title="Prekliči termin" aria-label="Prekliči">
             <Ban className="size-3.5" />
           </button>
         </>

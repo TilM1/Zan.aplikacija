@@ -22,7 +22,7 @@ export function UserMenu({ user }: { user: ShellUser }) {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 rounded-md py-1 pr-1.5 pl-1 hover:bg-subtle" aria-expanded={open}>
-        <span className="grid size-7 place-items-center rounded-full bg-brand-soft text-xs font-semibold text-brand">{initials(user.firstName, user.lastName)}</span>
+        <span className="grid size-9 place-items-center rounded-full bg-ink text-xs font-semibold text-gold">{initials(user.firstName, user.lastName)}</span>
         <span className="hidden text-left leading-tight sm:block">
           <span className="block text-[13px] font-medium">
             {user.firstName} {user.lastName}

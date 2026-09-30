@@ -2,19 +2,21 @@ import { forwardRef, type ButtonHTMLAttributes } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger" | "success";
+type Variant = "primary" | "gold" | "secondary" | "ghost" | "danger" | "success";
 type Size = "sm" | "md";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-brand text-white hover:bg-brand-hover shadow-sm",
+  primary: "bg-ink text-white hover:bg-black shadow-sm",
+  /** The main action of a screen (e.g. "Nov termin", "Vnesi rezultat"). */
+  gold: "bg-gold text-ink hover:bg-gold-hover shadow-sm font-semibold",
   secondary: "bg-surface text-ink border border-line-strong hover:bg-subtle shadow-xs",
   ghost: "text-ink-2 hover:bg-subtle hover:text-ink",
   danger: "bg-danger text-white hover:bg-danger/90 shadow-sm",
   success: "bg-success text-white hover:bg-success/90 shadow-sm",
 };
 const sizes: Record<Size, string> = {
-  sm: "h-8 px-2.5 text-[13px] gap-1.5",
-  md: "h-9 px-3.5 text-sm gap-2",
+  sm: "h-9 px-3 text-[13px] gap-1.5",
+  md: "h-10 px-4 text-sm gap-2",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -33,7 +35,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type={type}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-md font-medium whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex shrink-0 items-center justify-center rounded-lg font-medium whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50",
         variants[variant],
         sizes[size],
         className,
@@ -48,7 +50,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 
 export function buttonClasses(variant: Variant = "primary", size: Size = "md", className?: string) {
   return cn(
-    "inline-flex shrink-0 items-center justify-center rounded-md font-medium whitespace-nowrap transition-colors",
+    "inline-flex shrink-0 items-center justify-center rounded-lg font-medium whitespace-nowrap transition-colors",
     variants[variant],
     sizes[size],
     className,

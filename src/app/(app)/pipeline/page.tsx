@@ -44,7 +44,7 @@ export default async function PipelinePage({ searchParams }: PageProps<"/pipelin
         <>
           <ViewSwitch view={view} hrefFor={(v) => hrefWith("/pipeline", sp, { view: v === "kanban" ? undefined : v, page: undefined })} />
           {isOwner && (
-            <Link href="/appointments/new" className={buttonClasses("primary", "md")}>
+            <Link href="/appointments/new" className={buttonClasses("gold", "md")}>
               Nov termin
             </Link>
           )}

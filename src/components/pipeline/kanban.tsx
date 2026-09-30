@@ -214,12 +214,12 @@ function Card({
       {(card.canRecord || card.canEdit) && (
         <div className="mt-2 flex gap-1.5">
           {card.canRecord && (
-            <button onClick={onRecord} className="h-7 flex-1 rounded border border-brand/30 bg-brand-soft text-xs font-medium text-brand hover:bg-brand hover:text-white">
-              Rezultat
+            <button onClick={onRecord} className="h-8 flex-1 rounded-md bg-gold text-xs font-semibold text-ink hover:bg-gold-hover">
+              Vnesi rezultat
             </button>
           )}
           {card.canEdit && (
-            <button onClick={onEdit} className="grid h-7 w-7 place-items-center rounded border border-line text-ink-3 hover:bg-subtle hover:text-ink" aria-label="Uredi termin" title="Prestavi / prerazporedi">
+            <button onClick={onEdit} className="grid size-8 place-items-center rounded-md border border-line text-ink-3 hover:bg-subtle hover:text-ink" aria-label="Uredi termin" title="Prestavi / prerazporedi">
               <Pencil className="size-3.5" />
             </button>
           )}

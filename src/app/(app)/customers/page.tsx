@@ -36,7 +36,7 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
         description={profile.role === "owner" ? "Vse stranke v CRM" : "Stranke, s katerimi ste povezani"}
         actions={
           profile.role !== "agent" && (
-            <Link href="/appointments/new" className={buttonClasses()}>
+            <Link href="/appointments/new" className={buttonClasses("gold")}>
               Nov termin
             </Link>
           )

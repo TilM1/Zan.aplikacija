@@ -47,7 +47,7 @@ export function NewAppointmentForm({ agents, callers, isOwner }: { agents: Perso
       className="grid gap-4 xl:grid-cols-5"
     >
       <Card className="xl:col-span-3">
-        <CardHeader title="Stranka" description="Podatki za obisk na terenu" />
+        <CardHeader title={<StepTitle n={1}>Stranka</StepTitle>} description="Podatki za obisk na terenu" />
         <CardBody className="grid grid-cols-1 gap-3 sm:grid-cols-6">
           <Field label="Ime" required error={err("first_name")} className="sm:col-span-3">
             <Input value={customer.first_name} onChange={(e) => set("first_name", e.target.value)} autoFocus aria-invalid={!!err("first_name")} />
@@ -74,7 +74,7 @@ export function NewAppointmentForm({ agents, callers, isOwner }: { agents: Perso
       </Card>
 
       <Card className="xl:col-span-2">
-        <CardHeader title="Termin" description="Stranka se prikaže v pipelinu in koledarju izbranega zastopnika." />
+        <CardHeader title={<StepTitle n={2}>Termin in zastopnik</StepTitle>} description="Stranka se takoj prikaže v pipelinu in koledarju izbranega zastopnika." />
         <CardBody className="flex flex-col gap-4">
           <SlotFields value={slot} onChange={setSlot} agents={agents} errors={fieldErrors} prefix="appointment." />
           {isOwner && (
@@ -123,11 +123,20 @@ export function NewAppointmentForm({ agents, callers, isOwner }: { agents: Perso
           </div>
         )}
         <div className="flex justify-end">
-          <Button type="submit" loading={pending} disabled={!!duplicates}>
+          <Button type="submit" variant="gold" loading={pending} disabled={!!duplicates} className="h-11 px-6 text-[15px]">
             Shrani stranko in termin
           </Button>
         </div>
       </div>
     </form>
+  );
+}
+
+function StepTitle({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <span className="flex items-center gap-2">
+      <span className="grid size-6 place-items-center rounded-full bg-gold text-xs font-bold text-ink">{n}</span>
+      {children}
+    </span>
   );
 }

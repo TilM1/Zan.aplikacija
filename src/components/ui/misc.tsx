@@ -8,7 +8,7 @@ export function PageHeader({ title, description, actions }: { title: string; des
   return (
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="text-xl font-semibold tracking-tight text-ink">{title}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
         {description && <p className="mt-1 text-sm text-ink-3">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -46,9 +46,9 @@ export function Stat({ label, value, hint, href, tone }: { label: string; value:
       {hint && <p className="mt-0.5 text-xs text-ink-3">{hint}</p>}
     </>
   );
-  const cls = "block rounded-lg border border-line bg-surface p-4 shadow-xs";
+  const cls = "block rounded-xl border border-line bg-surface p-4 shadow-[0_1px_2px_rgb(0,0,0,0.04)]";
   return href ? (
-    <Link href={href} className={cn(cls, "transition-colors hover:border-line-strong")}>
+    <Link href={href} className={cn(cls, "transition-colors hover:border-gold hover:bg-gold-soft/40")}>
       {body}
     </Link>
   ) : (
@@ -66,7 +66,7 @@ export function Tabs({ tabs, active }: { tabs: { key: string; label: string; hre
           scroll={false}
           className={cn(
             "-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm whitespace-nowrap transition-colors",
-            t.key === active ? "border-brand font-medium text-ink" : "border-transparent text-ink-3 hover:text-ink",
+            t.key === active ? "border-gold font-semibold text-ink" : "border-transparent text-ink-3 hover:text-ink",
           )}
         >
           {t.label}

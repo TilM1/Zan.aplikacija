@@ -25,6 +25,7 @@ Enforcement layers:
 | Call lists (lead_lists / leads / history) | all | – | ready lists assigned to them or to all callers |
 | Do-not-call list (lead_suppressions) | server only | – | – |
 | Export / backup | ✔ | – | – |
+| Storno & deletion backups (deleted_records) | ✔ | – | – |
 
 ## Action matrix
 
@@ -38,6 +39,7 @@ Enforcement layers:
 | Close follow-up | ✔ | – | own |
 | Edit customer details, add note | ✔ | visible customers | visible customers |
 | Archive / restore customer | ✔ | – | – |
+| Storno policy, revert storno, delete / restore customer, purge deletion backup | ✔ | – | – |
 | Upload policy document | ✔ | visible customers | – |
 | Mark payouts paid | ✔ | – | – |
 | Create/edit/deactivate employees, set agent rates and caller multipliers, reset passwords | ✔ | – | – |

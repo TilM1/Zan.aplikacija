@@ -11,6 +11,8 @@ import { EmptyState, KeyValue, PageHeader } from "@/components/ui/misc";
 import { Badge } from "@/components/ui/badge";
 import { CommissionBreakdown } from "@/components/payroll/commission-breakdown";
 import { PolicyUpload } from "@/components/policies/policy-upload";
+import { StornoButton } from "@/components/storno/storno-dialogs";
+import { sumDecimals } from "@/lib/money";
 import { getPolicyDetail } from "@/server/queries/policies";
 import { getPeople, nameOf } from "@/server/queries/people";
 
@@ -35,8 +37,37 @@ export default async function PolicyPage({ params }: PageProps<"/policies/[id]">
             {policy.customer.first_name} {policy.customer.last_name}
           </Link>
         }
-        actions={policy.status === "cancelled" ? <Badge tone="danger">Preklicana</Badge> : <Badge tone="success">Aktivna</Badge>}
+        actions={
+          policy.status === "cancelled" ? (
+            <Badge tone="danger">Stornirana</Badge>
+          ) : (
+            <>
+              <Badge tone="success">Aktivna</Badge>
+              {profile.role === "owner" && (
+                <StornoButton
+                  size="md"
+                  policyId={policy.id}
+                  label={`${policy.product_name} · ${formatDecimalEur(policy.monthly_premium)}/mes.`}
+                  preview={{
+                    rows: commissions.map((c) => ({
+                      name: who(c.beneficiary_id),
+                      type: c.beneficiary_type,
+                      unpaid: sumDecimals(c.installments.filter((i) => i.kind === "regular" && i.status === "scheduled").map((i) => i.amount)),
+                      paid: sumDecimals(c.installments.filter((i) => i.kind === "regular" && i.status === "paid").map((i) => i.paid_amount ?? i.amount)),
+                    })),
+                  }}
+                />
+              )}
+            </>
+          )
+        }
       />
+      {policy.status === "cancelled" && (
+        <div className="mb-4 rounded-lg border border-danger/25 bg-danger-soft px-4 py-3 text-sm text-danger">
+          <b>Polica je stornirana</b> {policy.cancelled_at ? `(${formatDate(policy.cancelled_at)})` : ""}. Razlog: {policy.cancel_reason ?? "–"}. Neizplačane provizije so preklicane, že
+          izplačane se odbijejo pri naslednjem izplačilu.
+        </div>
+      )}
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="flex flex-col gap-4 xl:col-span-2">
           {commissions.length === 0 ? (

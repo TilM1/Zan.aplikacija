@@ -59,6 +59,12 @@ export function firstPayoutDate(policyDate: IsoDate, rules: CommissionRules = CO
   return monthWithDay(year, month, monthsAhead, rules.payoutDay);
 }
 
+/** Next payout day (16th) on or after the given date — default date for storno deductions. */
+export function nextPayoutDayOnOrAfter(date: IsoDate, rules: CommissionRules = COMMISSION_RULES): IsoDate {
+  const { year, month, day } = parseIsoDate(date);
+  return monthWithDay(year, month, day <= rules.payoutDay ? 0 : 1, rules.payoutDay);
+}
+
 export function installmentDueDate(
   policyDate: IsoDate,
   monthsAfterFirstPayout: number,

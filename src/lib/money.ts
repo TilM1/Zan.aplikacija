@@ -5,16 +5,21 @@
 
 export type Cents = number;
 
+/** User input: positive amounts only. */
 const MONEY_RE = /^\d{1,10}([.,]\d{1,2})?$/;
+/** Stored values may be negative (storno deductions / clawbacks). */
+const SIGNED_MONEY_RE = /^-?\d{1,10}([.,]\d{1,2})?$/;
 
-/** Parse "100", "100.5", "100,50" or a number into integer cents. Throws on invalid input. */
+/** Parse "100", "100.5", "100,50", "-660.00" or a number into integer cents. Throws on invalid input. */
 export function toCents(value: string | number): Cents {
   const raw = typeof value === "number" ? value.toFixed(2) : value.trim().replace(/\s/g, "");
-  if (!MONEY_RE.test(raw)) {
+  if (!SIGNED_MONEY_RE.test(raw)) {
     throw new Error(`Invalid money amount: ${value}`);
   }
-  const [whole, frac = ""] = raw.replace(",", ".").split(".");
-  return Number(whole) * 100 + Number(frac.padEnd(2, "0"));
+  const negative = raw.startsWith("-");
+  const [whole, frac = ""] = raw.replace("-", "").replace(",", ".").split(".");
+  const cents = Number(whole) * 100 + Number(frac.padEnd(2, "0"));
+  return negative ? -cents : cents;
 }
 
 export function isValidMoneyInput(value: string): boolean {

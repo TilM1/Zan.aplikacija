@@ -116,6 +116,8 @@ export interface Policy {
   caller_id: string | null;
   status: "active" | "cancelled";
   note: string | null;
+  cancelled_at: string | null;
+  cancel_reason: string | null;
   created_at: string;
 }
 
@@ -143,6 +145,9 @@ export interface Installment {
   beneficiary_id: string;
   beneficiary_type: Beneficiary;
   installment_number: number;
+  /** "clawback" = negative deduction created by a storno */
+  kind: "regular" | "clawback";
+  reverses_installment_id: string | null;
   share_percent: Numeric;
   amount: Numeric;
   due_date: string;
@@ -236,4 +241,19 @@ export interface LeadEvent {
   next_call_at: string | null;
   comment: string | null;
   created_at: string;
+}
+
+export interface DeletedRecord {
+  id: string;
+  kind: "customer_deleted" | "policy_storno";
+  customer_id: string;
+  customer_name: string;
+  policy_id: string | null;
+  summary: string;
+  reason: string;
+  meta: Record<string, unknown>;
+  created_by: string | null;
+  created_at: string;
+  restored_at: string | null;
+  restored_by: string | null;
 }

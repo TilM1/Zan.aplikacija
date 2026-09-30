@@ -49,6 +49,19 @@ The date used is the **policy date** entered by the Agent. It defaults to the co
 
 Each change adds a row to the history (`agent_commission_rates` / `caller_commission_rates`) with the time and who set it. The new value applies to every policy **saved from that moment on**. Policies already saved keep the value they were sold with, and so does their payout schedule. Nothing is recalculated retroactively.
 
+## Storno (policy rejected by the insurer)
+
+Owner → customer → Police → **Storno** (or on the policy page). Requires a reason.
+
+- The policy becomes `cancelled` (kept in history), and its commissions become `cancelled`.
+- **Unpaid** installments (agent and caller) → `cancelled`.
+- **Already paid** installments are never modified. For each one, a **clawback** installment (`kind = clawback`, negative amount, number 101–112) is added for the same person. It is due on the chosen payout date (default: the next 16th), so the next payout is reduced by that amount.
+- Everything is snapshotted in `deleted_records`. A storno can be **reverted** (Storno in izbrisi) as long as its clawbacks are not yet settled.
+
+## Deleting a customer
+
+Only possible while **nothing has been paid** for that customer; otherwise use storno, so payroll history stays intact. A full snapshot (customer, appointments, policies, commissions, documents metadata, timeline, call-list links) is stored in `deleted_records`, and the customer can be **restored** exactly. Document files stay in private storage. A deletion backup can be purged permanently (GDPR erasure); storno backups cannot, because they are part of the financial trail.
+
 ## Rounding
 
 - All arithmetic is in integer cents.

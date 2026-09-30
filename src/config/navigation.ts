@@ -6,7 +6,7 @@ import type { Role } from "@/types/domain";
 
 export type NavIcon =
   | "dashboard" | "pipeline" | "calendar" | "customers" | "policies" | "employees" | "payroll"
-  | "reports" | "export" | "settings" | "new" | "followups" | "appointments" | "production" | "earnings" | "profile" | "leads";
+  | "reports" | "export" | "settings" | "new" | "followups" | "appointments" | "production" | "earnings" | "profile" | "leads" | "trash";
 
 export interface NavItem {
   href: string;
@@ -42,6 +42,7 @@ export const NAVIGATION: Record<Role, NavSection[]> = {
         { href: "/payroll", label: "Provizije in izplačila", icon: "payroll" },
         { href: "/reports", label: "Poročila", icon: "reports" },
         { href: "/export", label: "Uvoz / izvoz", icon: "export" },
+        { href: "/deleted", label: "Storno in izbrisi", icon: "trash" },
         { href: "/settings", label: "Nastavitve", icon: "settings" },
       ],
     },
@@ -97,6 +98,7 @@ export const ROUTE_ACCESS: Record<string, Role[]> = {
   "/payroll": ["owner"],
   "/reports": ["owner"],
   "/export": ["owner"],
+  "/deleted": ["owner"],
   "/leads": ["owner", "caller"],
   "/settings": ["owner"],
 };

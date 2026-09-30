@@ -11,10 +11,11 @@ import type { Commission, Installment } from "@/types/domain";
 export function CommissionBreakdown({ commission, beneficiaryName, today }: { commission: Commission & { installments: Installment[] }; beneficiaryName: string; today: string }) {
   const calc = commission.calculation as Record<string, unknown>;
   const installments = [...commission.installments].sort((a, b) => a.installment_number - b.installment_number);
+  const cancelled = commission.status === "cancelled";
   return (
     <Card>
       <CardHeader
-        title={`Provizija – ${BENEFICIARY_LABELS[commission.beneficiary_type]}: ${beneficiaryName}`}
+        title={`Provizija – ${BENEFICIARY_LABELS[commission.beneficiary_type]}: ${beneficiaryName}${cancelled ? " (stornirano)" : ""}`}
         description={`Pravila ${commission.rule_version} · obračunano ${formatDateTime(commission.created_at)}`}
         actions={<span className="text-base font-semibold tabular">{formatDecimalEur(commission.total_amount)}</span>}
       />
@@ -43,9 +44,9 @@ export function CommissionBreakdown({ commission, beneficiaryName, today }: { co
         <tbody>
           {installments.map((i) => (
             <TR key={i.id}>
-              <TD>{i.installment_number}.</TD>
-              <TD className="text-right tabular">{Number(i.share_percent)} %</TD>
-              <TD className="text-right font-medium tabular">{formatDecimalEur(i.amount)}</TD>
+              <TD>{i.kind === "clawback" ? <span className="font-semibold text-danger">Storno odbitek</span> : `${i.installment_number}.`}</TD>
+              <TD className="text-right tabular">{i.kind === "clawback" ? "–" : `${Number(i.share_percent)} %`}</TD>
+              <TD className={`text-right font-medium tabular ${Number(i.amount) < 0 ? "text-danger" : ""}`}>{formatDecimalEur(i.amount)}</TD>
               <TD className="tabular">
                 {formatDate(i.due_date)}
                 {i.due_date !== i.original_due_date && <span className="ml-1 text-xs text-ink-3">(prvotno {formatDate(i.original_due_date)})</span>}

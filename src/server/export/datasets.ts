@@ -47,7 +47,7 @@ export const EXPORT_DATASETS: ExportDataset[] = [
     description: "Vse police s premijo, trajanjem, zastopnikom in klicateljem",
     table: "policies",
     select:
-      "id, customer_id, appointment_id, product_id, product_name, policy_number, monthly_premium, duration_years, policy_date, agent_id, caller_id, status, note, created_by, created_at, cancelled_at, customer:customers(first_name, last_name), agent:profiles!policies_agent_id_fkey(first_name, last_name), caller:profiles!policies_caller_id_fkey(first_name, last_name)",
+      "id, customer_id, appointment_id, product_id, product_name, policy_number, monthly_premium, duration_years, policy_date, agent_id, caller_id, status, note, created_by, created_at, cancelled_at, cancel_reason, cancelled_by, customer:customers(first_name, last_name), agent:profiles!policies_agent_id_fkey(first_name, last_name), caller:profiles!policies_caller_id_fkey(first_name, last_name)",
     dateColumn: "policy_date",
     order: "policy_date",
     flatten: ({ customer, agent, caller, ...r }) => ({ ...r, customer_name: person(customer), agent_name: person(agent), caller_name: person(caller) }),
@@ -58,7 +58,7 @@ export const EXPORT_DATASETS: ExportDataset[] = [
     description: "Vsi obroki z izračunom, zapadlostjo in statusom plačila",
     table: "commission_installments",
     select:
-      "id, commission_id, policy_id, beneficiary_id, beneficiary_type, installment_number, share_percent, amount, due_date, original_due_date, status, paid_at, paid_by, paid_amount, payment_note, cancelled_at, cancel_reason, created_at, commission:commissions(total_amount, base_monthly_premium, base_duration_years, rate_percent, caller_multiplier, policy_date, rule_version, calculation), beneficiary:profiles!commission_installments_beneficiary_id_fkey(first_name, last_name), policy:policies(customer_id, product_name, policy_number)",
+      "id, commission_id, policy_id, beneficiary_id, beneficiary_type, kind, reverses_installment_id, installment_number, share_percent, amount, due_date, original_due_date, status, paid_at, paid_by, paid_amount, payment_note, cancelled_at, cancel_reason, created_at, commission:commissions(total_amount, base_monthly_premium, base_duration_years, rate_percent, caller_multiplier, policy_date, rule_version, calculation), beneficiary:profiles!commission_installments_beneficiary_id_fkey(first_name, last_name), policy:policies(customer_id, product_name, policy_number)",
     dateColumn: "due_date",
     order: "due_date",
     flatten: ({ commission, beneficiary, policy, ...r }) => {
@@ -123,6 +123,15 @@ export const EXPORT_DATASETS: ExportDataset[] = [
     description: "Uvoženi seznami (mape): datoteka, datum, klicateljica, število uvoženih in preskočenih vrstic",
     table: "lead_lists",
     select: "id, name, source_file_name, status, assigned_caller_id, total_rows, imported_count, skipped_duplicates, skipped_suppressed, skipped_invalid, imported_by, created_at",
+    dateColumn: "created_at",
+    order: "created_at",
+  },
+  {
+    key: "deleted_records",
+    label: "Storno in izbrisi (varnostna kopija)",
+    description: "Vsi storni in izbrisi s polnim posnetkom podatkov pred spremembo",
+    table: "deleted_records",
+    select: "id, kind, customer_id, customer_name, policy_id, summary, reason, meta, created_by, created_at, restored_at, restored_by, snapshot",
     dateColumn: "created_at",
     order: "created_at",
   },

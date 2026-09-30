@@ -7,6 +7,7 @@ import {
   callerCommissionTotal,
   firstPayoutDate,
   installmentDueDate,
+  nextPayoutDayOnOrAfter,
   splitByShares,
 } from "./engine";
 import { COMMISSION_RULES } from "./rules";
@@ -49,7 +50,8 @@ describe("agent commission", () => {
     expect(() => agentCommissionTotal(100, 1.5, 1000)).toThrow();
     expect(() => agentCommissionTotal(100, 10, 10001)).toThrow();
     expect(() => toCents("12.345")).toThrow();
-    expect(() => toCents("-5")).toThrow();
+    expect(toCents("-660.00")).toBe(-66000); // stored deductions
+    expect(() => agentCommissionTotal(toCents("-5"), 10, 1000)).toThrow();
   });
 });
 
@@ -111,6 +113,15 @@ describe("payout cutoff (24th) → 16th", () => {
     expect(() => firstPayoutDate("2026-02-30")).toThrow();
     expect(() => firstPayoutDate("23.10.2026")).toThrow();
   });
+});
+
+describe("storno deduction date", () => {
+  it.each([
+    ["2026-10-01", "2026-10-16"],
+    ["2026-10-16", "2026-10-16"],
+    ["2026-10-17", "2026-11-16"],
+    ["2026-12-20", "2027-01-16"],
+  ])("%s → %s", (d, e) => expect(nextPayoutDayOnOrAfter(d)).toBe(e));
 });
 
 describe("multiple policies from one consultation", () => {

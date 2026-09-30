@@ -3,6 +3,7 @@
 import { Fragment, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -132,9 +133,15 @@ export function LedgerTable({
                     </Link>
                   </TD>
                   <TD className="whitespace-nowrap text-ink-2">
-                    {r.beneficiary_type === "caller" ? "enkratno" : `${r.installment_number}. (${Number(r.share_percent)} %)`}
+                    {r.kind === "clawback" ? (
+                      <span className="font-semibold text-danger">Storno odbitek{r.beneficiary_type === "agent" ? ` (${r.installment_number - 100}. obrok)` : ""}</span>
+                    ) : r.beneficiary_type === "caller" ? (
+                      "enkratno"
+                    ) : (
+                      `${r.installment_number}. (${Number(r.share_percent)} %)`
+                    )}
                   </TD>
-                  <TD className="text-right font-medium tabular">{formatDecimalEur(r.amount)}</TD>
+                  <TD className={cn("text-right font-medium tabular", Number(r.amount) < 0 && "text-danger")}>{formatDecimalEur(r.amount)}</TD>
                   <TD className="whitespace-nowrap">
                     <InstallmentStatusBadge status={displayStatus(r, today)} />
                     {r.paid_at && <span className="ml-1.5 text-xs text-ink-3">{formatDate(r.paid_at)}</span>}

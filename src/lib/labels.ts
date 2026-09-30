@@ -87,6 +87,11 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   caller_multiplier_changed: "Provizija klicatelja spremenjena",
   product_saved: "Produkt shranjen",
   lead_list_imported: "Klicni seznam uvožen",
+  policy_cancelled: "Polica stornirana",
+  commission_reversed: "Provizije stornirane (odbitek)",
+  policy_storno_reverted: "Storno razveljavljen",
+  customer_deleted: "Stranka izbrisana",
+  backup_purged: "Varnostna kopija trajno izbrisana",
   lead_list_deleted: "Klicni seznam izbrisan",
   setting_changed: "Nastavitev spremenjena",
 };

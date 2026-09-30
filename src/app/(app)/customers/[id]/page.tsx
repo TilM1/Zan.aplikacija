@@ -14,6 +14,8 @@ import { Table, TD, TH, THead, TR } from "@/components/ui/table";
 import { AppointmentStatusBadge, CustomerStatusBadge, FollowupStatusBadge } from "@/components/ui/status";
 import { Timeline } from "@/components/customers/timeline";
 import { CustomerActions } from "@/components/customers/customer-actions";
+import { DeleteCustomerButton, StornoButton, type StornoPreview } from "@/components/storno/storno-dialogs";
+import type { Commission, Installment } from "@/types/domain";
 import { getCustomerDetail } from "@/server/queries/customers";
 import { getAgents, getPeople, getVisibleCommissionRates, nameOf, toOptions } from "@/server/queries/people";
 import { getActiveProducts } from "@/server/queries/policies";
@@ -41,6 +43,17 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
   const timeline = activity.map((row) => describeActivity(row, who));
   const notes = timeline.filter((e) => e.kind === "note");
   const monthlyTotal = sumDecimals(policies.filter((p) => p.status === "active").map((p) => p.monthly_premium));
+  const hasPaid = commissions.some((c) => c.installments.some((i) => i.status === "paid"));
+  const stornoPreview = (policyId: string): StornoPreview => ({
+    rows: commissions
+      .filter((c: Commission & { installments: Installment[] }) => c.policy_id === policyId)
+      .map((c) => ({
+        name: who(c.beneficiary_id),
+        type: c.beneficiary_type,
+        unpaid: sumDecimals(c.installments.filter((i) => i.kind === "regular" && i.status === "scheduled").map((i) => i.amount)),
+        paid: sumDecimals(c.installments.filter((i) => i.kind === "regular" && i.status === "paid").map((i) => i.paid_amount ?? i.amount)),
+      })),
+  });
 
   const tabs = [
     { key: "timeline", label: "Časovnica", count: timeline.length },
@@ -107,6 +120,7 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
           policies={policies.map((p) => ({ id: p.id, label: `${p.product_name}${p.policy_number ? ` (${p.policy_number})` : ""} – ${formatDate(p.policy_date)}` }))}
           defaultAgentId={appointments[0]?.agent_id ?? customer.current_agent_id}
         />
+        {isOwner && <DeleteCustomerButton customerId={customer.id} name={`${customer.first_name} ${customer.last_name}`} hasPaid={hasPaid} />}
       </div>
 
       {openAppt && (
@@ -193,6 +207,7 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
                       <TH>Klicatelj</TH>
                       {commissions.length > 0 && <TH className="text-right">Moja / vidna provizija</TH>}
                       <TH>Dokument</TH>
+                      {isOwner && <TH className="text-right">Storno</TH>}
                     </tr>
                   </THead>
                   <tbody>
@@ -202,9 +217,14 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
                       return (
                         <TR key={p.id}>
                           <TD>
-                            <Link href={`/policies/${p.id}`} className="font-medium hover:text-brand hover:underline">
+                            <Link href={`/policies/${p.id}`} className={p.status === "cancelled" ? "font-medium text-ink-3 line-through" : "font-medium hover:text-brand hover:underline"}>
                               {p.product_name}
                             </Link>
+                            {p.status === "cancelled" && (
+                              <span className="mt-0.5 block text-xs text-danger" title={p.cancel_reason ?? ""}>
+                                Stornirana {p.cancelled_at ? formatDate(p.cancelled_at) : ""}
+                              </span>
+                            )}
                           </TD>
                           <TD className="text-ink-2">{p.policy_number ?? "–"}</TD>
                           <TD className="tabular">{formatDate(p.policy_date)}</TD>
@@ -226,6 +246,15 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
                               "–"
                             )}
                           </TD>
+                          {isOwner && (
+                            <TD className="text-right">
+                              {p.status === "active" ? (
+                                <StornoButton policyId={p.id} label={`${p.product_name} · ${formatDecimalEur(p.monthly_premium)}/mes. · ${formatDate(p.policy_date)}`} preview={stornoPreview(p.id)} />
+                              ) : (
+                                <span className="text-xs text-ink-3">–</span>
+                              )}
+                            </TD>
+                          )}
                         </TR>
                       );
                     })}

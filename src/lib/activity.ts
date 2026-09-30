@@ -85,6 +85,12 @@ export function describeActivity(row: ActivityRow, nameOf: (id: string | null | 
           .map((k) => `${FIELD_LABELS[k] ?? k}: ${str(o[k]) || "–"} → ${str(n[k]) || "–"}`)
           .join(" · "),
       };
+    case "policy_cancelled":
+      return { ...base, kind: "policy", title: `Polica stornirana – ${str(m.product)}`, detail: str(n.reason) || undefined };
+    case "policy_storno_reverted":
+      return { ...base, kind: "policy" };
+    case "commission_reversed":
+      return { ...base, kind: "money", detail: `preklicano ${formatDecimalEur(n.cancelled_sum as string)} · odbitek ${formatDecimalEur(n.clawback_sum as string)} (${formatDate(str(n.clawback_due))})` };
     case "status_changed":
       return { ...base, kind: "change" };
     default:

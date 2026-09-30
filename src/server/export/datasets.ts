@@ -129,6 +129,16 @@ export const EXPORT_DATASETS: ExportDataset[] = [
     order: "created_at",
   },
   {
+    key: "expiries",
+    label: "Skadence",
+    description: "Datumi poteka drugih zavarovanj strank z zastopnikom in stanjem",
+    table: "customer_expiries",
+    select: "id, customer_id, category, description, insurer, expiry_date, note, assigned_agent_id, status, outcome, snoozed_until, handled_at, handled_by, created_by, created_at, customer:customers(first_name, last_name, phone)",
+    dateColumn: "created_at",
+    order: "expiry_date",
+    flatten: ({ customer, ...r }) => ({ ...r, customer_name: person(customer), customer_phone: (customer as { phone?: string } | null)?.phone ?? "" }),
+  },
+  {
     key: "deleted_records",
     label: "Storno in izbrisi (varnostna kopija)",
     description: "Vsi storni in izbrisi s polnim posnetkom podatkov pred spremembo",

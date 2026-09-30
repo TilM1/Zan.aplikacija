@@ -15,6 +15,9 @@ import { AppointmentStatusBadge, CustomerStatusBadge, FollowupStatusBadge } from
 import { Timeline } from "@/components/customers/timeline";
 import { CustomerActions } from "@/components/customers/customer-actions";
 import { DeleteCustomerButton, StornoButton, type StornoPreview } from "@/components/storno/storno-dialogs";
+import { AddExpiriesButton, ExpiryActions } from "@/components/expiries/expiry-actions";
+import { getCustomerExpiries } from "@/server/queries/expiries";
+import { EXPIRY_CATEGORY_LABELS } from "@/lib/labels";
 import type { Commission, Installment } from "@/types/domain";
 import { getCustomerDetail } from "@/server/queries/customers";
 import { getAgents, getPeople, getVisibleCommissionRates, nameOf, toOptions } from "@/server/queries/people";
@@ -22,7 +25,7 @@ import { getActiveProducts } from "@/server/queries/policies";
 
 export const metadata: Metadata = { title: "Stranka" };
 
-type Tab = "timeline" | "appointments" | "policies" | "documents" | "notes";
+type Tab = "timeline" | "appointments" | "policies" | "documents" | "notes" | "expiries";
 
 export default async function CustomerPage({ params, searchParams }: PageProps<"/customers/[id]">) {
   const { profile } = await requireSession();
@@ -30,7 +33,14 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
   const sp = await searchParams;
   if (!isUuid(id)) notFound();
 
-  const [detail, people, agents, products, rates] = await Promise.all([getCustomerDetail(id), getPeople(), getAgents(), getActiveProducts(), getVisibleCommissionRates()]);
+  const [detail, people, agents, products, rates, expiries] = await Promise.all([
+    getCustomerDetail(id),
+    getPeople(),
+    getAgents(),
+    getActiveProducts(),
+    getVisibleCommissionRates(),
+    getCustomerExpiries(id),
+  ]);
   if (!detail) notFound();
   const { customer, appointments, policies, documents, activity, followups, commissions } = detail;
 
@@ -60,6 +70,7 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
     { key: "appointments", label: "Termini in svetovanja", count: appointments.length },
     { key: "policies", label: "Police", count: policies.length },
     ...(profile.role !== "caller" ? [{ key: "documents", label: "Dokumenti", count: documents.length }] : []),
+    ...(profile.role !== "caller" ? [{ key: "expiries", label: "Skadence", count: expiries.filter((e) => e.status === "open").length }] : []),
     { key: "notes", label: "Opombe", count: notes.length },
   ].map((t) => ({ ...t, href: hrefWith(`/customers/${id}`, sp, { tab: t.key === "timeline" ? undefined : t.key, created: undefined }) }));
 
@@ -261,6 +272,54 @@ export default async function CustomerPage({ params, searchParams }: PageProps<"
                   </tbody>
                 </Table>
               ))}
+
+            {tab === "expiries" && (
+              <div>
+                <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
+                  <p className="text-sm text-ink-3">Datumi poteka drugih zavarovanj stranke. Opomnik za klic dobite pred potekom.</p>
+                  <AddExpiriesButton customerId={customer.id} />
+                </div>
+                {expiries.length === 0 ? (
+                  <EmptyState title="Ni vpisanih skadenc" />
+                ) : (
+                  <Table>
+                    <THead>
+                      <tr>
+                        <TH>Poteče</TH>
+                        <TH>Vrsta</TH>
+                        <TH>Opis / zavarovalnica</TH>
+                        <TH>Opomba / izid</TH>
+                        <TH>Zastopnik</TH>
+                        <TH className="text-right">Stanje</TH>
+                      </tr>
+                    </THead>
+                    <tbody>
+                      {expiries.map((e) => (
+                        <TR key={e.id}>
+                          <TD className="font-semibold whitespace-nowrap tabular">{formatDate(e.expiry_date)}</TD>
+                          <TD className="whitespace-nowrap">{EXPIRY_CATEGORY_LABELS[e.category]}</TD>
+                          <TD className="text-ink-2">
+                            {e.description ?? "–"}
+                            {e.insurer && <span className="block text-xs text-ink-3">{e.insurer}</span>}
+                          </TD>
+                          <TD className="max-w-64 text-ink-2">{e.outcome ?? e.note ?? ""}</TD>
+                          <TD className="whitespace-nowrap">{who(e.assigned_agent_id)}</TD>
+                          <TD className="text-right">
+                            {e.status === "open" ? (
+                              isOwner || e.assigned_agent_id === profile.id ? <ExpiryActions id={e.id} category={e.category} /> : <Badge tone="info">Odprto</Badge>
+                            ) : e.status === "done" ? (
+                              <Badge tone="success">Urejeno</Badge>
+                            ) : (
+                              <Badge>Ni aktualno</Badge>
+                            )}
+                          </TD>
+                        </TR>
+                      ))}
+                    </tbody>
+                  </Table>
+                )}
+              </div>
+            )}
 
             {tab === "documents" &&
               (documents.length === 0 ? (

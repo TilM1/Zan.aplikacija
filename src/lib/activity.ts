@@ -91,6 +91,12 @@ export function describeActivity(row: ActivityRow, nameOf: (id: string | null | 
       return { ...base, kind: "policy" };
     case "commission_reversed":
       return { ...base, kind: "money", detail: `preklicano ${formatDecimalEur(n.cancelled_sum as string)} · odbitek ${formatDecimalEur(n.clawback_sum as string)} (${formatDate(str(n.clawback_due))})` };
+    case "expiry_added": {
+      const items = (n.items ?? []) as { category?: string; expiry_date?: string; description?: string }[];
+      return { ...base, kind: "note", title: `Skadence vpisane (${items.length})`, detail: items.map((i) => `${i.category}${i.description ? ` – ${i.description}` : ""}: ${formatDate(i.expiry_date ?? "")}`).join(" · ") };
+    }
+    case "expiry_updated":
+      return { ...base, kind: "note", title: n.status === "done" ? "Skadenca urejena" : n.status === "dismissed" ? "Skadenca ni več aktualna" : "Skadenca odložena", detail: [str(n.category), str(n.outcome)].filter(Boolean).join(" · ") || undefined };
     case "status_changed":
       return { ...base, kind: "change" };
     default:

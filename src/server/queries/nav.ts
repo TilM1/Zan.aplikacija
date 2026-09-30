@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/types/domain";
 import type { NavCounts } from "@/components/layout/sidebar";
 import { countDueLeads } from "@/server/queries/leads";
+import { countDueExpiries } from "@/server/queries/expiries";
 
 export async function getNavCounts(profile: Profile): Promise<NavCounts> {
   const supabase = await createClient();
@@ -26,6 +27,7 @@ export async function getNavCounts(profile: Profile): Promise<NavCounts> {
     );
   }
   if (profile.role === "caller") tasks.push(countDueLeads().then((n) => void (counts.leadsDue = n)));
+  if (profile.role !== "caller") tasks.push(countDueExpiries(profile.id).then((n) => void (counts.expiriesDue = n)));
   await Promise.all(tasks);
   return counts;
 }

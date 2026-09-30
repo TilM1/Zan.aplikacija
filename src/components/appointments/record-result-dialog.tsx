@@ -11,6 +11,8 @@ import { SlotFields, emptySlot, type SlotValue } from "./slot-fields";
 import { useSubmit } from "@/components/shared/use-submit";
 import { uploadDocument } from "@/components/shared/upload-document";
 import { recordResult, type RecordResultData } from "@/server/actions/results";
+import { addExpiries } from "@/server/actions/expiries";
+import { ExpiryEditor, filledExpiries, type ExpiryDraft } from "@/components/expiries/expiry-editor";
 import { RESULT_DESCRIPTIONS, RESULT_LABELS } from "@/lib/labels";
 import { buildPolicyCommissions } from "@/lib/commission/engine";
 import { formatDecimalEur, isValidMoneyInput } from "@/lib/money";
@@ -118,6 +120,7 @@ function ResultForm({
   const [next, setNext] = useState<SlotValue>(emptySlot(target.agentId));
   const [policies, setPolicies] = useState<PolicyDraft[]>([newPolicy(1)]);
   const [uploading, setUploading] = useState(false);
+  const [expiries, setExpiries] = useState<ExpiryDraft[]>([]);
 
   const updatePolicy = (key: number, patch: Partial<PolicyDraft>) => setPolicies((ps) => ps.map((p) => (p.key === key ? { ...p, ...patch } : p)));
 
@@ -142,6 +145,12 @@ function ResultForm({
 
     const res = await submit(() => recordResult(payload));
     if (!res?.ok) return;
+
+    const exp = filledExpiries(expiries);
+    if (exp.length && result !== "B") {
+      const e = await addExpiries({ customer_id: target.customerId, appointment_id: target.id, items: exp });
+      if (!e.ok) toast.warning(`Rezultat je shranjen, skadence pa ne: ${e.error}`);
+    }
 
     if (result === "A1") {
       const withFiles = policies.map((p, i) => ({ file: p.file, policyId: res.data.policy_ids[i] })).filter((x) => x.file && x.policyId);
@@ -237,6 +246,17 @@ function ResultForm({
             <Plus className="size-4" /> Dodaj še eno polico
           </Button>
         </section>
+      )}
+
+      {result && result !== "B" && (
+        <details className="rounded-lg border border-line px-3 py-2" open={expiries.length > 0}>
+          <summary className="cursor-pointer text-sm font-semibold">
+            Skadence stranke <span className="font-normal text-ink-3">(neobvezno – kdaj ji potečejo druga zavarovanja, npr. avto, hiša)</span>
+          </summary>
+          <div className="mt-3">
+            <ExpiryEditor rows={expiries} onChange={setExpiries} />
+          </div>
+        </details>
       )}
 
       {result && (

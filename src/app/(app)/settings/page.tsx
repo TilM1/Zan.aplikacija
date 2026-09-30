@@ -7,12 +7,14 @@ import { ProductsEditor } from "@/components/settings/products-editor";
 import { getAllProducts } from "@/server/queries/policies";
 import { getRecallMonths } from "@/server/queries/leads";
 import { RecallForm } from "@/components/settings/recall-form";
+import { ExpiryDaysForm } from "@/components/settings/expiry-days-form";
+import { getExpiryReminderDays } from "@/server/queries/expiries";
 
 export const metadata: Metadata = { title: "Nastavitve" };
 
 export default async function SettingsPage() {
   await requireSession(["owner"]);
-  const [products, recallMonths] = await Promise.all([getAllProducts(), getRecallMonths()]);
+  const [products, recallMonths, expiryDays] = await Promise.all([getAllProducts(), getRecallMonths(), getExpiryReminderDays()]);
   const r = COMMISSION_RULES;
   return (
     <>
@@ -43,6 +45,12 @@ export default async function SettingsPage() {
           <CardHeader title="Klicni seznami – ponovni klic po zavrnitvi" description="Ko klicateljica označi kontakt kot »Zavrnjen«, se ta čez izbrano obdobje ponovno pojavi v seznamu »Za klic«." />
           <CardBody>
             <RecallForm current={recallMonths} />
+          </CardBody>
+        </Card>
+        <Card className="xl:col-span-2">
+          <CardHeader title="Skadence – opomnik pred potekom" description="Koliko dni pred potekom drugega zavarovanja stranke se skadenca pojavi zastopniku v seznamu »Za klic«." />
+          <CardBody>
+            <ExpiryDaysForm current={expiryDays} />
           </CardBody>
         </Card>
       </div>

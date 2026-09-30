@@ -88,6 +88,8 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   agent_product_multiplier_changed: "Provizija za produkt (število) spremenjena",
   product_saved: "Produkt shranjen",
   lead_list_imported: "Klicni seznam uvožen",
+  expiry_added: "Skadenca vpisana",
+  expiry_updated: "Skadenca posodobljena",
   policy_cancelled: "Polica stornirana",
   commission_reversed: "Provizije stornirane (odbitek)",
   policy_storno_reverted: "Storno razveljavljen",
@@ -106,3 +108,16 @@ export const LEAD_STATUS_LABELS: Record<LeadStatus, { label: string; tone: Tone;
   appointment: { label: "Termin", tone: "success", hint: "Termin dogovorjen – stranka v CRM" },
   do_not_call: { label: "Ne kliči", tone: "danger", hint: "Ne želi klicev (trajno)" },
 };
+
+export const EXPIRY_CATEGORY_LABELS: Record<import("@/types/domain").ExpiryCategory, string> = {
+  avto: "Avto (AO / kasko)",
+  dom: "Dom / stanovanje",
+  zivljenjsko: "Življenjsko",
+  nezgodno: "Nezgodno",
+  zdravstveno: "Zdravstveno",
+  potovalno: "Potovalno",
+  drugo: "Drugo",
+};
+
+/** Categories that usually renew every year (repeat suggested when handled). */
+export const YEARLY_EXPIRY_CATEGORIES = new Set(["avto", "dom", "nezgodno", "zdravstveno", "potovalno"]);

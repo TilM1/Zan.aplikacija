@@ -6,14 +6,14 @@ import type { Role } from "@/types/domain";
 
 export type NavIcon =
   | "dashboard" | "pipeline" | "calendar" | "customers" | "policies" | "employees" | "payroll"
-  | "reports" | "export" | "settings" | "new" | "followups" | "appointments" | "production" | "earnings" | "profile" | "leads" | "trash";
+  | "reports" | "export" | "settings" | "new" | "followups" | "appointments" | "production" | "earnings" | "profile" | "leads" | "trash" | "renewals";
 
 export interface NavItem {
   href: string;
   label: string;
   icon: NavIcon;
   /** Show a live counter badge (key into NavCounts). */
-  badge?: "followups" | "pendingResults" | "leadsDue";
+  badge?: "followups" | "pendingResults" | "leadsDue" | "expiriesDue";
 }
 
 export interface NavSection {
@@ -26,6 +26,7 @@ const AGENT_WORK: NavItem[] = [
   { href: "/pipeline", label: "Pipeline", icon: "pipeline", badge: "pendingResults" },
   { href: "/calendar", label: "Koledar", icon: "calendar" },
   { href: "/customers", label: "Stranke", icon: "customers" },
+  { href: "/renewals", label: "Skadence", icon: "renewals", badge: "expiriesDue" },
   { href: "/policies", label: "Police", icon: "policies" },
 ];
 
@@ -99,6 +100,7 @@ export const ROUTE_ACCESS: Record<string, Role[]> = {
   "/reports": ["owner"],
   "/export": ["owner"],
   "/deleted": ["owner"],
+  "/renewals": ["owner", "agent"],
   "/leads": ["owner", "caller"],
   "/settings": ["owner"],
 };

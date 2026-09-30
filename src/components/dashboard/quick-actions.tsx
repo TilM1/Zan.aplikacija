@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, ClipboardCheck, Coins, KanbanSquare, ListChecks, PhoneCall, PlusCircle, UserPlus, Users, Wallet, type LucideIcon } from "lucide-react";
+import { CalendarClock, CalendarDays, ClipboardCheck, KanbanSquare, ListChecks, PhoneCall, PlusCircle, UserPlus, Users, Wallet, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { todayIso } from "@/lib/dates";
 import { getNavCounts } from "@/server/queries/nav";
@@ -41,8 +41,8 @@ export async function QuickActions({ profile }: { profile: Profile }) {
         ? [
             { href: "/pipeline?view=table&status=pending", title: "Vnesi rezultate", hint: "Termini, ki čakajo na rezultat", icon: ClipboardCheck, primary: true, count: counts.pendingResults },
             { href: "/pipeline", title: "Moj pipeline", hint: "Vsi moji termini na enem mestu", icon: KanbanSquare },
+            { href: "/renewals", title: "Skadence", hint: "Strankam kmalu poteče zavarovanje", icon: CalendarClock, count: counts.expiriesDue },
             { href: "/calendar", title: "Koledar", hint: "Termini ta teden", icon: CalendarDays },
-            { href: "/earnings", title: "Moji zaslužki", hint: "Provizije in izplačila", icon: Coins },
           ]
         : [
             { href: "/appointments/new", title: "Nov termin", hint: "Vnesi stranko in termin", icon: PlusCircle, primary: true },

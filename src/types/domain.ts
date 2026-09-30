@@ -259,3 +259,23 @@ export interface DeletedRecord {
   restored_at: string | null;
   restored_by: string | null;
 }
+
+export type ExpiryCategory = "avto" | "dom" | "zivljenjsko" | "nezgodno" | "zdravstveno" | "potovalno" | "drugo";
+
+export interface CustomerExpiry {
+  id: string;
+  customer_id: string;
+  category: ExpiryCategory;
+  description: string | null;
+  insurer: string | null;
+  expiry_date: string;
+  note: string | null;
+  assigned_agent_id: string;
+  status: "open" | "done" | "dismissed";
+  outcome: string | null;
+  snoozed_until: string | null;
+  handled_at: string | null;
+  handled_by: string | null;
+  created_by: string;
+  created_at: string;
+}

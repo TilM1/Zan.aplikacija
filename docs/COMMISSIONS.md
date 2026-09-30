@@ -40,6 +40,17 @@ The Owner sets each Agent's number under Zaposleni → person → "Provizija za 
 
 Example: 30 € × 12 = 360 € → 180, 54, 36, 18, 18, then 6 × 9 €. The Caller commission is unchanged (premium × caller multiplier, once).
 
+## Owner earnings (agency commission)
+
+The insurer pays the agency per policy. The rate is set per product in Settings ("Agencija"):
+
+| Product model | Agency revenue (default) |
+|---|---|
+| standard (bonus, kasko) | premium × 12 × years × **6 %** |
+| agent_multiplier (Specialisti) | premium × **10.25** |
+
+It is snapshotted per policy at sale in `policy_agency_commissions`, which is **owner-only** (RLS). The table is filled by a trigger when a policy is inserted. The **owner's earnings** per policy are `agency − caller commission − agent commission`. When the owner is the selling agent, the agent part stays with him, so he keeps `agency − caller`. Cancelled (storno) policies are excluded. Figures are shown by policy date; the insurer's payment timing is not modelled.
+
 ## Payout timing
 
 - Cutoff: the **24th**. Payout day: the **16th**.

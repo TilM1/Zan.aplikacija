@@ -11,6 +11,8 @@ const productSchema = z.object({
   is_active: z.boolean(),
   sort_order: z.coerce.number().int().min(0).max(10000),
   commission_model: z.enum(["standard", "agent_multiplier"]).optional(),
+  agency_rate_percent: z.coerce.number().min(0).max(100).nullable().optional(),
+  agency_multiplier: z.coerce.number().min(0).max(1000).nullable().optional(),
 });
 
 export async function saveProduct(input: unknown): Promise<ActionResult> {
@@ -24,6 +26,8 @@ export async function saveProduct(input: unknown): Promise<ActionResult> {
       p_is_active: v.is_active,
       p_sort_order: v.sort_order,
       p_commission_model: v.commission_model ?? null,
+      p_agency_rate_percent: v.agency_rate_percent ?? null,
+      p_agency_multiplier: v.agency_multiplier ?? null,
     });
     revalidatePath("/settings");
     return undefined;

@@ -10,7 +10,7 @@ import { useSubmit } from "@/components/shared/use-submit";
 import { reorderProducts, saveProduct } from "@/server/actions/products";
 
 type Model = "standard" | "agent_multiplier";
-type Product = { id: string | null; name: string; is_active: boolean; sort_order: number; commission_model: Model };
+type Product = { id: string | null; name: string; is_active: boolean; sort_order: number; commission_model: Model; agency_rate_percent?: number | null; agency_multiplier?: number | null };
 type SavedProduct = Product & { id: string };
 
 export function ProductsEditor({ products }: { products: SavedProduct[] }) {
@@ -86,7 +86,10 @@ function ProductRow({
   const router = useRouter();
   const { submit, pending, error } = useSubmit();
   const [v, setV] = useState(product);
-  const dirty = v.name !== product.name || v.is_active !== product.is_active || v.commission_model !== product.commission_model || !product.id;
+  const agencyValue = v.commission_model === "agent_multiplier" ? v.agency_multiplier : v.agency_rate_percent;
+  const initialAgency = product.commission_model === "agent_multiplier" ? product.agency_multiplier : product.agency_rate_percent;
+  const dirty =
+    v.name !== product.name || v.is_active !== product.is_active || v.commission_model !== product.commission_model || Number(agencyValue ?? 0) !== Number(initialAgency ?? 0) || !product.id;
   const arrow = "grid size-8 place-items-center rounded-md border border-line text-ink-2 hover:border-gold hover:bg-gold-soft disabled:opacity-25 disabled:hover:bg-transparent";
 
   return (
@@ -118,6 +121,25 @@ function ProductRow({
             <option value="standard">Provizija: premija × 12 × leta × %</option>
             <option value="agent_multiplier">Provizija: premija × število zastopnika</option>
           </select>
+          <label className="flex shrink-0 items-center gap-1 text-xs text-ink-2" title="Koliko agenciji plača zavarovalnica (vidi samo lastnik)">
+            Agencija:
+            {v.commission_model === "agent_multiplier" && <span>×</span>}
+            <input
+              type="number"
+              step="0.01"
+              min={0}
+              value={agencyValue ?? ""}
+              onChange={(e) =>
+                setV(
+                  v.commission_model === "agent_multiplier"
+                    ? { ...v, agency_multiplier: e.target.value === "" ? null : Number(e.target.value) }
+                    : { ...v, agency_rate_percent: e.target.value === "" ? null : Number(e.target.value) },
+                )
+              }
+              className="h-10 w-20 rounded-lg border border-line-strong px-2 text-sm"
+            />
+            {v.commission_model !== "agent_multiplier" && <span>%</span>}
+          </label>
         </div>
         <label className="flex items-center justify-center" title="Aktiven produkt se ponuja pri vnosu police">
           <input type="checkbox" className="size-4 accent-[#c6a24b]" checked={v.is_active} onChange={(e) => setV({ ...v, is_active: e.target.checked })} aria-label="Aktiven" />

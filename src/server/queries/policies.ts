@@ -68,16 +68,18 @@ export interface ProductRow {
   is_active: boolean;
   sort_order: number;
   commission_model: "standard" | "agent_multiplier";
+  agency_rate_percent?: number | null;
+  agency_multiplier?: number | null;
 }
 
 export async function getActiveProducts() {
   const supabase = await createClient();
-  const { data } = await supabase.from("products").select("id, name, is_active, sort_order, commission_model").eq("is_active", true).order("sort_order");
+  const { data } = await supabase.from("products").select("id, name, is_active, sort_order, commission_model, agency_rate_percent, agency_multiplier").eq("is_active", true).order("sort_order");
   return (data ?? []) as ProductRow[];
 }
 
 export async function getAllProducts() {
   const supabase = await createClient();
-  const { data } = await supabase.from("products").select("id, name, is_active, sort_order, commission_model").order("sort_order");
+  const { data } = await supabase.from("products").select("id, name, is_active, sort_order, commission_model, agency_rate_percent, agency_multiplier").order("sort_order");
   return (data ?? []) as ProductRow[];
 }

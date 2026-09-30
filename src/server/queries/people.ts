@@ -34,6 +34,8 @@ export interface CommissionRates {
   agents: Record<string, string>;
   /** caller id → current multiplier ("1.5") */
   callers: Record<string, string>;
+  /** agent id → product id → current multiplier ("12") for "premija × število" products */
+  agentProducts: Record<string, Record<string, string>>;
 }
 
 /**
@@ -43,17 +45,27 @@ export interface CommissionRates {
  */
 export async function getVisibleCommissionRates(): Promise<CommissionRates> {
   const supabase = await createClient();
-  const [agents, callers] = await Promise.all([
+  const [agents, callers, productMults] = await Promise.all([
     getVisibleAgentRates(),
     supabase
       .from("caller_commission_rates")
       .select("caller_id, multiplier, effective_from, created_at")
       .order("effective_from", { ascending: false })
       .order("created_at", { ascending: false }),
+    supabase
+      .from("agent_product_multipliers")
+      .select("agent_id, product_id, multiplier, effective_from, created_at")
+      .order("effective_from", { ascending: false })
+      .order("created_at", { ascending: false }),
   ]);
   const callerMap: Record<string, string> = {};
   for (const r of callers.data ?? []) if (!(r.caller_id in callerMap)) callerMap[r.caller_id] = String(Number(r.multiplier));
-  return { agents, callers: callerMap };
+  const agentProducts: Record<string, Record<string, string>> = {};
+  for (const r of productMults.data ?? []) {
+    const m = (agentProducts[r.agent_id] ??= {});
+    if (!(r.product_id in m)) m[r.product_id] = String(Number(r.multiplier));
+  }
+  return { agents, callers: callerMap, agentProducts };
 }
 
 async function getVisibleAgentRates(): Promise<Record<string, string>> {

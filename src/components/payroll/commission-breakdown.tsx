@@ -24,7 +24,9 @@ export function CommissionBreakdown({ commission, beneficiaryName, today }: { co
           {String(calc.expression ?? "")} = <b>{formatDecimalEur(commission.total_amount)}</b>
         </p>
         <p className="mt-0.5 text-xs text-ink-3">
-          {commission.beneficiary_type === "agent"
+          {commission.beneficiary_type === "agent" && commission.calc_model === "agent_multiplier"
+            ? `Mesečna premija × število zastopnika za ta produkt ob prodaji (${Number(commission.agent_multiplier).toLocaleString("sl-SI")}), izplačilo v 11 mesečnih obrokih`
+            : commission.beneficiary_type === "agent"
             ? `Mesečna premija × 12 × trajanje (${commission.base_duration_years} let) × odstotek zastopnika ob prodaji (${Number(commission.rate_percent).toFixed(2)} %)`
             : `Mesečna premija × faktor klicatelja ob prodaji (${Number(commission.caller_multiplier).toLocaleString("sl-SI")}) – enkratno, izplačano skupaj s 1. obrokom zastopnika`}
           {" · "}datum police {formatDate(commission.policy_date)}

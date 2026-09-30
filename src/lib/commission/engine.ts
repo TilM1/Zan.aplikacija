@@ -109,20 +109,31 @@ export function callerCommissionTotal(monthlyPremium: Cents, multiplierThousandt
  * sum exactly to the total.
  */
 export function splitByShares(total: Cents, shares: readonly number[]): Cents[] {
-  const sum = shares.reduce((a, b) => a + b, 0);
-  if (sum !== 100) throw new Error(`Shares must sum to 100, got ${sum}`);
+  // Shares may have up to 2 decimals (e.g. 2.5 %): work in hundredths of a percent
+  const bp = shares.map((s) => Math.round(s * 100));
+  const sum = bp.reduce((a, b) => a + b, 0);
+  if (sum !== 10000) throw new Error(`Shares must sum to 100, got ${sum / 100}`);
   const parts: Cents[] = [];
   let allocated = 0;
-  shares.forEach((share, i) => {
-    if (i === shares.length - 1) {
+  bp.forEach((share, i) => {
+    if (i === bp.length - 1) {
       parts.push(total - allocated);
     } else {
-      const part = divRoundHalfUp(total * share, 100);
+      const part = divRoundHalfUp(total * share, 10000);
       parts.push(part);
       allocated += part;
     }
   });
   return parts;
+}
+
+/** premium × agent multiplier (thousandths) — for "agent_multiplier" products such as Specialisti */
+export function agentMultiplierTotal(monthlyPremium: Cents, multiplierThousandths: number): Cents {
+  assertPositiveCents(monthlyPremium);
+  if (!Number.isInteger(multiplierThousandths) || multiplierThousandths < 0 || multiplierThousandths > 1_000_000) {
+    throw new Error("Multiplier must be between 0 and 1000");
+  }
+  return divRoundHalfUp(monthlyPremium * multiplierThousandths, 1000);
 }
 
 function assertPositiveCents(value: Cents) {
@@ -139,8 +150,12 @@ export interface InstallmentPlan {
   due_date: IsoDate;
 }
 
+export type CommissionModel = "standard" | "agent_multiplier";
+
 export interface AgentCommissionPlan {
-  rate_percent: string;
+  calc_model: CommissionModel;
+  rate_percent: string | null;
+  agent_multiplier: string | null;
   total_amount: string;
   rule_version: string;
   calculation: Record<string, unknown>;
@@ -159,7 +174,12 @@ export interface PolicyCommissionInput {
   monthlyPremium: string; // decimal string, e.g. "100.00"
   durationYears: number;
   policyDate: IsoDate;
-  agentRatePercent: string; // snapshot of agent's current rate, e.g. "10.00"
+  /** Commission model of the product. */
+  agentModel?: CommissionModel;
+  /** Snapshot of agent's current rate (standard model), e.g. "10.00". */
+  agentRatePercent: string | null;
+  /** Snapshot of agent's current multiplier for this product (agent_multiplier model), e.g. "12". */
+  agentMultiplier?: string | null;
   /** Snapshot of the caller's current multiplier, e.g. "1.5"; null = appointment has no caller. */
   callerMultiplier: string | null;
 }
@@ -173,6 +193,8 @@ export function buildAgentCommission(
   input: Omit<PolicyCommissionInput, "callerMultiplier">,
   rules: CommissionRules = COMMISSION_RULES,
 ): AgentCommissionPlan {
+  if (input.agentModel === "agent_multiplier") return buildMultiplierAgentCommission(input, rules);
+  if (input.agentRatePercent === null) throw new Error("Agent rate is required for the standard commission model");
   const premium = toCents(input.monthlyPremium);
   const rate = percentToBasisHundredths(input.agentRatePercent);
   const total = agentCommissionTotal(premium, input.durationYears, rate, rules);
@@ -185,6 +207,8 @@ export function buildAgentCommission(
   }));
   const ratePercent = basisHundredthsToPercent(rate);
   return {
+    calc_model: "standard",
+    agent_multiplier: null,
     rate_percent: ratePercent,
     total_amount: centsToDecimal(total),
     rule_version: rules.version,
@@ -206,6 +230,46 @@ export function buildAgentCommission(
       })),
     },
     installments,
+  };
+}
+
+function buildMultiplierAgentCommission(
+  input: Omit<PolicyCommissionInput, "callerMultiplier">,
+  rules: CommissionRules,
+): AgentCommissionPlan {
+  if (!input.agentMultiplier) throw new Error("Agent multiplier is required for this product");
+  const premium = toCents(input.monthlyPremium);
+  const thousandths = multiplierToThousandths(input.agentMultiplier);
+  const multiplier = thousandthsToMultiplier(thousandths);
+  const total = agentMultiplierTotal(premium, thousandths);
+  const amounts = splitByShares(total, rules.multiplierInstallments.map((i) => i.sharePercent));
+  return {
+    calc_model: "agent_multiplier",
+    rate_percent: null,
+    agent_multiplier: multiplier,
+    total_amount: centsToDecimal(total),
+    rule_version: rules.version,
+    calculation: {
+      formula: "monthly_premium × agent_multiplier",
+      expression: `${centsToDecimal(premium)} × ${multiplier}`,
+      monthly_premium: centsToDecimal(premium),
+      agent_multiplier: multiplier,
+      total: centsToDecimal(total),
+      policy_date: input.policyDate,
+      cutoff_day: rules.cutoffDay,
+      payout_day: rules.payoutDay,
+      schedule: rules.multiplierInstallments.map((i) => ({
+        number: i.number,
+        share_percent: i.sharePercent,
+        months_after_first_payout: i.monthsAfterFirstPayout,
+      })),
+    },
+    installments: rules.multiplierInstallments.map((inst, idx) => ({
+      number: inst.number,
+      share_percent: inst.sharePercent.toFixed(2),
+      amount: centsToDecimal(amounts[idx]),
+      due_date: installmentDueDate(input.policyDate, inst.monthsAfterFirstPayout, rules),
+    })),
   };
 }
 

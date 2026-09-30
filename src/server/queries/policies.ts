@@ -62,14 +62,22 @@ export async function getPolicyDetail(id: string) {
   };
 }
 
+export interface ProductRow {
+  id: string;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
+  commission_model: "standard" | "agent_multiplier";
+}
+
 export async function getActiveProducts() {
   const supabase = await createClient();
-  const { data } = await supabase.from("products").select("id, name, is_active, sort_order").eq("is_active", true).order("sort_order");
-  return (data ?? []) as { id: string; name: string; is_active: boolean; sort_order: number }[];
+  const { data } = await supabase.from("products").select("id, name, is_active, sort_order, commission_model").eq("is_active", true).order("sort_order");
+  return (data ?? []) as ProductRow[];
 }
 
 export async function getAllProducts() {
   const supabase = await createClient();
-  const { data } = await supabase.from("products").select("id, name, is_active, sort_order").order("sort_order");
-  return (data ?? []) as { id: string; name: string; is_active: boolean; sort_order: number }[];
+  const { data } = await supabase.from("products").select("id, name, is_active, sort_order, commission_model").order("sort_order");
+  return (data ?? []) as ProductRow[];
 }

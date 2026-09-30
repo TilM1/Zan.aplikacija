@@ -40,15 +40,34 @@ export async function recordResult(input: unknown): Promise<ActionResult<RecordR
 
     let policies = null;
     if (v.result === "A1") {
-      // Snapshot the CURRENT agent rate and caller multiplier (never retroactive).
+      // Snapshot the CURRENT agent rate / per-product multipliers and caller multiplier (never retroactive).
       const admin = createAdminClient();
-      const [{ data: rate, error }, callerRes] = await Promise.all([
+      const productIds = [...new Set(v.policies.map((p) => p.product_id))];
+      const [{ data: rate, error }, callerRes, productsRes, multRes] = await Promise.all([
         admin.rpc("current_agent_rate", { p_agent_id: appt.agent_id }),
         appt.caller_id ? admin.rpc("current_caller_multiplier", { p_caller_id: appt.caller_id }) : Promise.resolve({ data: null, error: null }),
+        admin.from("products").select("id, name, commission_model").in("id", productIds),
+        admin
+          .from("agent_product_multipliers")
+          .select("product_id, multiplier, effective_from, created_at")
+          .eq("agent_id", appt.agent_id)
+          .in("product_id", productIds)
+          .order("effective_from", { ascending: false })
+          .order("created_at", { ascending: false }),
       ]);
       if (error) throw error;
       if (callerRes.error) throw callerRes.error;
-      if (rate === null || rate === undefined) {
+      const products = (productsRes.data ?? []) as { id: string; name: string; commission_model: "standard" | "agent_multiplier" }[];
+      const productModels = Object.fromEntries(products.map((p) => [p.id, p.commission_model]));
+      const agentMultipliers: Record<string, string> = {};
+      for (const m of multRes.data ?? []) if (!(m.product_id in agentMultipliers)) agentMultipliers[m.product_id] = String(Number(m.multiplier));
+      for (const p of products) {
+        if (p.commission_model === "agent_multiplier" && !agentMultipliers[p.id]) {
+          throw new WorkflowError(`Zastopnik nima nastavljene provizije za produkt »${p.name}«. Obrnite se na lastnika.`);
+        }
+      }
+      const needsRate = products.some((p) => p.commission_model === "standard");
+      if (needsRate && (rate === null || rate === undefined)) {
         throw new WorkflowError("Zastopnik nima nastavljenega odstotka provizije. Obrnite se na lastnika.");
       }
       if (appt.caller_id && (callerRes.data === null || callerRes.data === undefined)) {
@@ -56,7 +75,12 @@ export async function recordResult(input: unknown): Promise<ActionResult<RecordR
       }
       policies = buildPoliciesPayload(
         v.policies.map((p) => ({ ...p, policy_number: p.policy_number || null, note: p.note || null })),
-        { agentRatePercent: Number(rate).toFixed(2), callerMultiplier: appt.caller_id ? String(Number(callerRes.data)) : null },
+        {
+          agentRatePercent: rate === null || rate === undefined ? null : Number(rate).toFixed(2),
+          callerMultiplier: appt.caller_id ? String(Number(callerRes.data)) : null,
+          productModels,
+          agentMultipliers,
+        },
       );
     }
 

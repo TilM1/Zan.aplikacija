@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
 import { useSubmit } from "@/components/shared/use-submit";
-import { changeEmployeeEmail, createEmployee, setAgentRate, setCallerMultiplier, setEmployeePassword, updateEmployee } from "@/server/actions/employees";
+import { changeEmployeeEmail, createEmployee, setAgentProductMultiplier, setAgentRate, setCallerMultiplier, setEmployeePassword, updateEmployee } from "@/server/actions/employees";
 import { ROLE_LABELS } from "@/lib/labels";
 import type { Role } from "@/types/domain";
 
@@ -175,12 +175,12 @@ export function EditEmployeeForm({ employee, isSelf }: { employee: { id: string;
  * Change an employee's commission: agent rate (%) or caller multiplier (×).
  * Always creates a new history entry; existing policies keep the value they were sold with.
  */
-export function RateForm({ employeeId, kind, current }: { employeeId: string; kind: "agent" | "caller"; current: string | null }) {
+export function RateForm({ employeeId, kind, current, productId }: { employeeId: string; kind: "agent" | "caller" | "product"; current: string | null; productId?: string }) {
   const router = useRouter();
   const { submit, pending, error } = useSubmit();
   const [value, setValue] = useState(current?.replace(".", ",") ?? "");
   const [confirming, setConfirming] = useState(false);
-  const label = kind === "agent" ? "Nov odstotek (%)" : "Nov faktor (× mesečna premija)";
+  const label = kind === "agent" ? "Nov odstotek (%)" : kind === "caller" ? "Nov faktor (× mesečna premija)" : "Novo število (× mesečna premija)";
   const pretty = (x: string) => (kind === "agent" ? `${x} %` : `× ${x}`);
   return (
     <div className="flex flex-col gap-2">
@@ -198,7 +198,11 @@ export function RateForm({ employeeId, kind, current }: { employeeId: string; ki
             loading={pending}
             onClick={async () => {
               const res = await submit(() =>
-                kind === "agent" ? setAgentRate({ agent_id: employeeId, rate_percent: value }) : setCallerMultiplier({ caller_id: employeeId, multiplier: value }),
+                kind === "agent"
+                  ? setAgentRate({ agent_id: employeeId, rate_percent: value })
+                  : kind === "caller"
+                    ? setCallerMultiplier({ caller_id: employeeId, multiplier: value })
+                    : setAgentProductMultiplier({ agent_id: employeeId, product_id: productId, multiplier: value }),
               );
               if (res?.ok) {
                 setConfirming(false);

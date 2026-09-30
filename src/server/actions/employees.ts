@@ -82,6 +82,33 @@ export async function setCallerMultiplier(input: unknown): Promise<ActionResult>
   }, "Provizija klicatelja je spremenjena. Velja za nove police.");
 }
 
+/** Agent's own multiplier for a "premija × število" product (e.g. Specialisti). New policies only. */
+export async function setAgentProductMultiplier(input: unknown): Promise<ActionResult> {
+  return runAction(async () => {
+    const { userId } = await requireActor(["owner"]);
+    const v = z
+      .object({
+        agent_id: z.string().uuid(),
+        product_id: z.string().uuid(),
+        multiplier: z
+          .string()
+          .trim()
+          .transform((x) => x.replace(",", "."))
+          .refine((x) => /^\d{1,4}(\.\d{1,3})?$/.test(x) && Number(x) <= 1000, "Vnesite število (npr. 12 ali 10,5)."),
+      })
+      .parse(input);
+    await callWorkflow("crm_set_agent_product_multiplier", {
+      p_actor: userId,
+      p_agent_id: v.agent_id,
+      p_product_id: v.product_id,
+      p_multiplier: v.multiplier,
+    });
+    revalidatePath(`/employees/${v.agent_id}`);
+    revalidatePath("/employees");
+    return undefined;
+  }, "Provizija za produkt je spremenjena. Velja za nove police.");
+}
+
 export async function setEmployeePassword(input: unknown): Promise<ActionResult> {
   return runAction(async () => {
     const { userId } = await requireActor(["owner"]);

@@ -103,6 +103,26 @@ export class TestDb {
     return id;
   }
 
+  /** Product commission models + the agent's current per-product multipliers (as the server action reads them). */
+  async productContext(agentId: string) {
+    const models = await this.query<{ id: string; commission_model: "standard" | "agent_multiplier" }>(`select id, commission_model from public.products`);
+    const mults = await this.query<{ product_id: string; m: string }>(
+      `select distinct on (product_id) product_id, multiplier::text m from public.agent_product_multipliers where agent_id = $1 order by product_id, effective_from desc, created_at desc`,
+      [agentId],
+    );
+    return {
+      productModels: Object.fromEntries(models.map((r) => [r.id, r.commission_model])),
+      agentMultipliers: Object.fromEntries(mults.map((r) => [r.product_id, String(Number(r.m))])),
+    };
+  }
+
+  async setProductMultiplier(agentId: string, productName: string, multiplier: number) {
+    await this.query(
+      `insert into public.agent_product_multipliers (agent_id, product_id, multiplier) select $1, id, $2 from public.products where name = $3`,
+      [agentId, multiplier, productName],
+    );
+  }
+
   async rpc<T = unknown>(fn: string, args: Record<string, unknown>): Promise<T> {
     const names = Object.keys(args);
     const sql = `select public.${fn}(${names.map((n, i) => `${n} => $${i + 1}`).join(", ")}) as result`;

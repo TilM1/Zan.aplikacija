@@ -62,7 +62,7 @@ export function RecordResultDialog({
   target: ResultTarget | null;
   initialResult?: ConsultationResult;
   agents: PersonOption[];
-  products: { id: string; name: string }[];
+  products: { id: string; name: string; commission_model?: "standard" | "agent_multiplier" }[];
   /** Commission settings visible to the user (preview only). */
   rates: CommissionRates;
   onClose: () => void;
@@ -83,6 +83,7 @@ export function RecordResultDialog({
           agents={agents}
           products={products}
           agentRatePercent={rates.agents[target.agentId] ?? null}
+          agentMultipliers={rates.agentProducts[target.agentId] ?? {}}
           callerMultiplier={target.callerId ? (rates.callers[target.callerId] ?? null) : null}
           onDone={onClose}
         />
@@ -97,14 +98,16 @@ function ResultForm({
   agents,
   products,
   agentRatePercent,
+  agentMultipliers,
   callerMultiplier,
   onDone,
 }: {
   target: ResultTarget;
   initialResult?: ConsultationResult;
   agents: PersonOption[];
-  products: { id: string; name: string }[];
+  products: { id: string; name: string; commission_model?: "standard" | "agent_multiplier" }[];
   agentRatePercent: string | null;
+  agentMultipliers: Record<string, string>;
   callerMultiplier: string | null;
   onDone: () => void;
 }) {
@@ -222,6 +225,8 @@ function ResultForm({
               products={products}
               errors={fieldErrors}
               agentRatePercent={agentRatePercent}
+              agentMultiplier={agentMultipliers[p.product_id] ?? null}
+              productModel={products.find((x) => x.id === p.product_id)?.commission_model ?? "standard"}
               callerMultiplier={callerMultiplier}
               canRemove={policies.length > 1}
               onChange={(patch) => updatePolicy(p.key, patch)}
@@ -258,6 +263,8 @@ function PolicyCard({
   products,
   errors,
   agentRatePercent,
+  agentMultiplier,
+  productModel,
   callerMultiplier,
   canRemove,
   onChange,
@@ -265,9 +272,11 @@ function PolicyCard({
 }: {
   index: number;
   draft: PolicyDraft;
-  products: { id: string; name: string }[];
+  products: { id: string; name: string; commission_model?: "standard" | "agent_multiplier" }[];
   errors: Record<string, string>;
   agentRatePercent: string | null;
+  agentMultiplier: string | null;
+  productModel: "standard" | "agent_multiplier";
   /** Known only when visible to the user; the server uses the authoritative value. */
   callerMultiplier: string | null;
   canRemove: boolean;
@@ -278,19 +287,22 @@ function PolicyCard({
 
   const preview = useMemo(() => {
     const years = Number(draft.duration_years);
-    if (!agentRatePercent || !isValidMoneyInput(draft.monthly_premium) || !Number.isInteger(years) || years < 1 || !draft.policy_date) return null;
+    const hasAgentInput = productModel === "agent_multiplier" ? !!agentMultiplier : !!agentRatePercent;
+    if (!hasAgentInput || !isValidMoneyInput(draft.monthly_premium) || !Number.isInteger(years) || years < 1 || !draft.policy_date) return null;
     try {
       return buildPolicyCommissions({
         monthlyPremium: draft.monthly_premium.replace(",", "."),
         durationYears: years,
         policyDate: draft.policy_date,
+        agentModel: productModel,
         agentRatePercent,
+        agentMultiplier,
         callerMultiplier,
       });
     } catch {
       return null;
     }
-  }, [draft.monthly_premium, draft.duration_years, draft.policy_date, agentRatePercent, callerMultiplier]);
+  }, [draft.monthly_premium, draft.duration_years, draft.policy_date, agentRatePercent, agentMultiplier, productModel, callerMultiplier]);
 
   return (
     <div className="rounded-lg border border-line p-4">

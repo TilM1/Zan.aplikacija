@@ -29,7 +29,7 @@ async function callerRate(callerId: string) {
 }
 
 async function rate(agentId: string) {
-  return (await db.one<{ r: string }>(`select public.current_agent_rate($1)::text as r`, [agentId])).r;
+  return (await db.one<{ r: string | null }>(`select public.current_agent_rate($1)::text as r`, [agentId])).r;
 }
 
 async function recordA1(actor: string, appointmentId: string, entries: Parameters<typeof buildPoliciesPayload>[0]) {
@@ -37,7 +37,11 @@ async function recordA1(actor: string, appointmentId: string, entries: Parameter
     `select agent_id, caller_id from appointments where id = $1`,
     [appointmentId],
   );
-  const payload = buildPoliciesPayload(entries, { agentRatePercent: await rate(appt.agent_id), callerMultiplier: appt.caller_id ? await callerRate(appt.caller_id) : null });
+  const payload = buildPoliciesPayload(entries, {
+    agentRatePercent: await rate(appt.agent_id),
+    callerMultiplier: appt.caller_id ? await callerRate(appt.caller_id) : null,
+    ...(await db.productContext(appt.agent_id)),
+  });
   return db.rpc<{ policy_ids: string[] }>("crm_record_result", {
     p_actor: actor,
     p_appointment_id: appointmentId,
@@ -56,6 +60,8 @@ beforeAll(async () => {
   callerAna = await db.createUser("caller", "Ana");
   callerBor = await db.createUser("caller", "Bor");
   productIds = (await db.query<{ id: string }>(`select id from products order by sort_order`)).map((r) => r.id);
+  await db.setProductMultiplier(agentMarko, "Specialisti", 12);
+  await db.setProductMultiplier(agentLuka, "Specialisti", 10);
 });
 
 afterAll(async () => db?.close());
@@ -285,6 +291,63 @@ describe("result A1 — policies and commissions", () => {
     const res = await recordA1(agentMarko, appointment_id, [{ product_id: productIds[0], monthly_premium: "80.00", duration_years: 5, policy_date: "2026-10-10" }]);
     const types = await db.query<{ beneficiary_type: string }>(`select beneficiary_type from commissions where policy_id = $1`, [res.policy_ids[0]]);
     expect(types.map((t) => t.beneficiary_type)).toEqual(["agent"]);
+  });
+});
+
+describe("Specialisti: agent multiplier model", () => {
+  it("premium × agent's own number, 11 monthly installments; changing the number is not retroactive", async () => {
+    const { appointment_id } = await createAppointment(callerAna, agentMarko, "Spec1");
+    const r1 = await recordA1(agentMarko, appointment_id, [{ product_id: productIds[2], monthly_premium: "30.00", duration_years: 5, policy_date: "2026-10-23" }]);
+    const c1 = await db.one<Record<string, unknown>>(
+      `select calc_model, agent_multiplier::text, rate_percent, total_amount::text from commissions where policy_id = $1 and beneficiary_type = 'agent'`,
+      [r1.policy_ids[0]],
+    );
+    expect(c1).toEqual({ calc_model: "agent_multiplier", agent_multiplier: "12.000", rate_percent: null, total_amount: "360.00" });
+    const inst = await db.query<{ amount: string; due_date: string }>(
+      `select amount::text, due_date::text from commission_installments where policy_id = $1 and beneficiary_type = 'agent' order by installment_number`,
+      [r1.policy_ids[0]],
+    );
+    expect(inst.map((i) => i.amount)).toEqual(["180.00", "54.00", "36.00", "18.00", "18.00", "9.00", "9.00", "9.00", "9.00", "9.00", "9.00"]);
+    expect(inst[0].due_date).toBe("2026-11-16");
+    expect(inst[10].due_date).toBe("2027-09-16");
+    const caller = await db.one<{ t: string }>(`select total_amount::text t from commissions where policy_id = $1 and beneficiary_type = 'caller'`, [r1.policy_ids[0]]);
+    expect(caller.t).toBe("45.00"); // caller unchanged: 30 × 1.5
+
+    // Owner raises Marko to ×14 → only new Specialisti policies use it
+    await expect(db.rpc("crm_set_agent_product_multiplier", { p_actor: agentMarko, p_agent_id: agentMarko, p_product_id: productIds[2], p_multiplier: 20 })).rejects.toThrow(/lastnik/);
+    await expect(db.rpc("crm_set_agent_product_multiplier", { p_actor: owner, p_agent_id: agentMarko, p_product_id: productIds[0], p_multiplier: 20 })).rejects.toThrow(/ne uporablja/);
+    await db.rpc("crm_set_agent_product_multiplier", { p_actor: owner, p_agent_id: agentMarko, p_product_id: productIds[2], p_multiplier: 14 });
+    const { appointment_id: a2 } = await createAppointment(callerAna, agentMarko, "Spec2");
+    const r2 = await recordA1(agentMarko, a2, [{ product_id: productIds[2], monthly_premium: "30.00", duration_years: 5, policy_date: "2026-10-24" }]);
+    const totals = await db.query<{ policy_id: string; t: string }>(
+      `select policy_id, total_amount::text t from commissions where beneficiary_type = 'agent' and policy_id = any($1::uuid[])`,
+      [[r1.policy_ids[0], r2.policy_ids[0]]],
+    );
+    const by = Object.fromEntries(totals.map((t) => [t.policy_id, t.t]));
+    expect(by[r1.policy_ids[0]]).toBe("360.00");
+    expect(by[r2.policy_ids[0]]).toBe("420.00");
+  });
+
+  it("rejects a Specialisti sale if the agent has no number, or if the payload uses the wrong model", async () => {
+    const noNum = await db.createUser("agent", "Nonumber", "10");
+    const { appointment_id } = await createAppointment(callerAna, noNum, "Spec3");
+    // Even if a client sent a made-up number, the database rejects it
+    const forged = buildPoliciesPayload([{ product_id: productIds[2], monthly_premium: "30.00", duration_years: 5, policy_date: "2026-10-23" }], {
+      agentRatePercent: "10.00", callerMultiplier: "1.5", productModels: { [productIds[2]]: "agent_multiplier" }, agentMultipliers: { [productIds[2]]: "12" },
+    });
+    await expect(db.rpc("crm_record_result", { p_actor: noNum, p_appointment_id: appointment_id, p_result: "A1", p_note: null, p_next: null, p_policies: forged })).rejects.toThrow(/nima nastavljene provizije za produkt/);
+    // Standard-model payload for a multiplier product is rejected
+    const bad = buildPoliciesPayload([{ product_id: productIds[2], monthly_premium: "30.00", duration_years: 5, policy_date: "2026-10-23" }], { agentRatePercent: "10.00", callerMultiplier: "1.5" });
+    const { appointment_id: a2 } = await createAppointment(callerAna, agentMarko, "Spec4");
+    await expect(db.rpc("crm_record_result", { p_actor: agentMarko, p_appointment_id: a2, p_result: "A1", p_note: null, p_next: null, p_policies: bad })).rejects.toThrow(/medtem spremenila/);
+  });
+
+  it("an agent with only a Specialisti number (no %) can sell Specialisti", async () => {
+    const onlySpec = await db.createUser("agent", "Onlyspec");
+    await db.setProductMultiplier(onlySpec, "Specialisti", 8);
+    const { appointment_id } = await createAppointment(callerAna, onlySpec, "Spec5");
+    const r = await recordA1(onlySpec, appointment_id, [{ product_id: productIds[2], monthly_premium: "25.00", duration_years: 1, policy_date: "2026-10-01" }]);
+    expect(r.policy_ids).toHaveLength(1);
   });
 });
 

@@ -10,6 +10,7 @@ const productSchema = z.object({
   name: z.string().trim().min(1, "Ime je obvezno.").max(120),
   is_active: z.boolean(),
   sort_order: z.coerce.number().int().min(0).max(10000),
+  commission_model: z.enum(["standard", "agent_multiplier"]).optional(),
 });
 
 export async function saveProduct(input: unknown): Promise<ActionResult> {
@@ -22,6 +23,7 @@ export async function saveProduct(input: unknown): Promise<ActionResult> {
       p_name: v.name,
       p_is_active: v.is_active,
       p_sort_order: v.sort_order,
+      p_commission_model: v.commission_model ?? null,
     });
     revalidatePath("/settings");
     return undefined;

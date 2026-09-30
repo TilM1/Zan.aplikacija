@@ -85,6 +85,7 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   employee_updated: "Zaposleni posodobljen",
   agent_rate_changed: "Odstotek provizije spremenjen",
   caller_multiplier_changed: "Provizija klicatelja spremenjena",
+  agent_product_multiplier_changed: "Provizija za produkt (število) spremenjena",
   product_saved: "Produkt shranjen",
   lead_list_imported: "Klicni seznam uvožen",
   policy_cancelled: "Polica stornirana",

@@ -19,7 +19,7 @@ export default async function SettingsPage() {
       <PageHeader title="Nastavitve" />
       <div className="grid gap-4 xl:grid-cols-2">
         <Card>
-          <CardHeader title="Produkti" description="Produkti, ki jih zastopnik izbira pri vnosu police. S puščicama določite vrstni red v seznamu. Neaktiven produkt se ne ponuja več, obstoječe police ostanejo." />
+          <CardHeader title="Produkti" description="Produkti, ki jih zastopnik izbira pri vnosu police. S puščicama določite vrstni red. Pri vsakem izberete, kako se računa provizija zastopnika (velja samo za nove police)." />
           <ProductsEditor products={products} />
         </Card>
         <Card>

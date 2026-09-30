@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { useSubmit } from "@/components/shared/use-submit";
 import { reorderProducts, saveProduct } from "@/server/actions/products";
 
-type Product = { id: string | null; name: string; is_active: boolean; sort_order: number };
+type Model = "standard" | "agent_multiplier";
+type Product = { id: string | null; name: string; is_active: boolean; sort_order: number; commission_model: Model };
 type SavedProduct = Product & { id: string };
 
 export function ProductsEditor({ products }: { products: SavedProduct[] }) {
@@ -50,7 +51,7 @@ export function ProductsEditor({ products }: { products: SavedProduct[] }) {
         ))}
         {adding && (
           <ProductRow
-            product={{ id: null, name: "", is_active: true, sort_order: (products.length + 1) * 10 }}
+            product={{ id: null, name: "", is_active: true, sort_order: (products.length + 1) * 10, commission_model: "standard" }}
             position={products.length + 1}
             onDone={() => setAdding(false)}
           />
@@ -85,7 +86,7 @@ function ProductRow({
   const router = useRouter();
   const { submit, pending, error } = useSubmit();
   const [v, setV] = useState(product);
-  const dirty = v.name !== product.name || v.is_active !== product.is_active || !product.id;
+  const dirty = v.name !== product.name || v.is_active !== product.is_active || v.commission_model !== product.commission_model || !product.id;
   const arrow = "grid size-8 place-items-center rounded-md border border-line text-ink-2 hover:border-gold hover:bg-gold-soft disabled:opacity-25 disabled:hover:bg-transparent";
 
   return (
@@ -108,6 +109,15 @@ function ProductRow({
         <div className="flex min-w-0 items-center gap-2">
           <Input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="Ime produkta" autoFocus={!product.id} />
           {!v.is_active && <Badge>Skrit</Badge>}
+          <select
+            value={v.commission_model}
+            onChange={(e) => setV({ ...v, commission_model: e.target.value as Model })}
+            className="h-10 shrink-0 rounded-lg border border-line-strong bg-surface px-2 text-xs"
+            title="Kako se izračuna provizija zastopnika"
+          >
+            <option value="standard">Provizija: premija × 12 × leta × %</option>
+            <option value="agent_multiplier">Provizija: premija × število zastopnika</option>
+          </select>
         </div>
         <label className="flex items-center justify-center" title="Aktiven produkt se ponuja pri vnosu police">
           <input type="checkbox" className="size-4 accent-[#c6a24b]" checked={v.is_active} onChange={(e) => setV({ ...v, is_active: e.target.checked })} aria-label="Aktiven" />

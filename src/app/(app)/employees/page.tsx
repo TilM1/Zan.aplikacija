@@ -82,6 +82,10 @@ export default async function EmployeesPage({ searchParams }: PageProps<"/employ
                       {p.role === "caller"
                         ? rates.callers[p.id] ? `× ${Number(rates.callers[p.id]).toLocaleString("sl-SI")}` : <span className="text-warning">ni nastavljeno</span>
                         : rates.agents[p.id] ? `${Number(rates.agents[p.id]).toLocaleString("sl-SI")} %` : <span className="text-warning">ni nastavljeno</span>}
+                      {p.role !== "caller" &&
+                        Object.values(rates.agentProducts[p.id] ?? {}).map((m, i) => (
+                          <span key={i} className="block text-[11px] text-ink-3">Specialisti × {Number(m).toLocaleString("sl-SI")}</span>
+                        ))}
                     </Link>
                   </TD>
                   <TD className="text-right tabular">{agg?.count ?? 0}</TD>

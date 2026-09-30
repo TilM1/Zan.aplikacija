@@ -130,6 +130,8 @@ export interface Commission {
   base_duration_years: number | null;
   rate_percent: Numeric | null;
   caller_multiplier: Numeric | null;
+  calc_model: "standard" | "agent_multiplier";
+  agent_multiplier: Numeric | null;
   total_amount: Numeric;
   policy_date: string;
   rule_version: string;

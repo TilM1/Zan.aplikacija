@@ -115,6 +115,36 @@ describe("payout cutoff (24th) → 16th", () => {
   });
 });
 
+describe("Specialisti (agent multiplier model)", () => {
+  const plan = buildAgentCommission({ agentModel: "agent_multiplier", agentMultiplier: "12", agentRatePercent: null, monthlyPremium: "30", durationYears: 5, policyDate: "2026-10-23" });
+
+  it("total = monthly premium × agent's number (30 × 12 = 360 €)", () => {
+    expect(plan).toMatchObject({ calc_model: "agent_multiplier", agent_multiplier: "12", rate_percent: null, total_amount: "360.00" });
+    expect(plan.calculation.expression).toBe("30.00 × 12");
+  });
+
+  it("pays 50 / 15 / 10 / 5 / 5 / 6 × 2.5 % monthly from the first payout", () => {
+    expect(plan.installments.map((i) => i.share_percent)).toEqual(["50.00", "15.00", "10.00", "5.00", "5.00", "2.50", "2.50", "2.50", "2.50", "2.50", "2.50"]);
+    expect(plan.installments.map((i) => i.amount)).toEqual(["180.00", "54.00", "36.00", "18.00", "18.00", "9.00", "9.00", "9.00", "9.00", "9.00", "9.00"]);
+    expect(plan.installments.map((i) => i.due_date)).toEqual([
+      "2026-11-16", "2026-12-16", "2027-01-16", "2027-02-16", "2027-03-16", "2027-04-16",
+      "2027-05-16", "2027-06-16", "2027-07-16", "2027-08-16", "2027-09-16",
+    ]);
+  });
+
+  it("cutoff still applies (policy on the 25th → first payout two months later)", () => {
+    const late = buildAgentCommission({ agentModel: "agent_multiplier", agentMultiplier: "10", agentRatePercent: null, monthlyPremium: "19.99", durationYears: 1, policyDate: "2026-10-25" });
+    expect(late.installments[0].due_date).toBe("2026-12-16");
+    const sum = late.installments.reduce((a, i) => a + toCents(i.amount), 0);
+    expect(sum).toBe(toCents(late.total_amount)); // 199.90, rounding remainder in the last installment
+  });
+
+  it("the caller commission is unchanged for Specialisti", () => {
+    const p = buildPolicyCommissions({ agentModel: "agent_multiplier", agentMultiplier: "12", agentRatePercent: null, monthlyPremium: "30", durationYears: 5, policyDate: "2026-10-23", callerMultiplier: "1.5" });
+    expect(p.caller!.total_amount).toBe("45.00");
+  });
+});
+
 describe("storno deduction date", () => {
   it.each([
     ["2026-10-01", "2026-10-16"],

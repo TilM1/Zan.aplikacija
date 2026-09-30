@@ -36,7 +36,7 @@ export default async function EmployeePage({ params }: PageProps<"/employees/[id
   const trend = lastMonths(12);
   const today = todayIso();
   const supabase = await createClient();
-  const [rates, prodMonth, prodTrend, results, installments, upcoming] = await Promise.all([
+  const [rates, prodMonth, prodTrend, results, installments, upcoming, multProducts, productMults] = await Promise.all([
     isCaller
       ? supabase.from("caller_commission_rates").select("id, value:multiplier, effective_from, set_by").eq("caller_id", id).order("effective_from", { ascending: false }).order("created_at", { ascending: false })
       : supabase.from("agent_commission_rates").select("id, value:rate_percent, effective_from, set_by").eq("agent_id", id).order("effective_from", { ascending: false }).order("created_at", { ascending: false }),
@@ -51,7 +51,11 @@ export default async function EmployeePage({ params }: PageProps<"/employees/[id
       .eq("status", "scheduled")
       .order("scheduled_at")
       .limit(10),
+    supabase.from("products").select("id, name").eq("commission_model", "agent_multiplier").order("sort_order"),
+    supabase.from("agent_product_multipliers").select("id, product_id, value:multiplier, effective_from, set_by").eq("agent_id", id).order("effective_from", { ascending: false }).order("created_at", { ascending: false }),
   ]);
+  const multProductList = (multProducts.data ?? []) as { id: string; name: string }[];
+  const multRows = (productMults.data ?? []) as { id: string; product_id: string; value: number; effective_from: string; set_by: string | null }[];
   const rateRows = (rates.data ?? []) as { id: string; value: number; effective_from: string; set_by: string | null }[];
   const fmtRate = (v: number) => (isCaller ? `× ${Number(v).toLocaleString("sl-SI")}` : `${Number(v).toLocaleString("sl-SI")} %`);
   const s = summarize(installments, today);
@@ -121,6 +125,41 @@ export default async function EmployeePage({ params }: PageProps<"/employees/[id
               )}
             </CardBody>
           </Card>
+          {!isCaller &&
+            multProductList.map((prod) => {
+              const hist = multRows.filter((r) => r.product_id === prod.id);
+              return (
+                <Card key={prod.id}>
+                  <CardHeader title={`Provizija za ${prod.name}`} description="Mesečna premija × število · izplačilo v 11 mesečnih obrokih (50/15/10/5/5/6×2,5 %)" />
+                  <CardBody className="flex flex-col gap-4">
+                    {hist.length === 0 && <p className="rounded-md bg-warning-soft px-3 py-2 text-xs text-warning">Ni nastavljeno – zastopnik tega produkta ne more vnesti, dokler ne nastavite števila.</p>}
+                    <RateForm employeeId={id} kind="product" productId={prod.id} current={hist[0] ? String(Number(hist[0].value)) : null} />
+                    {hist.length > 0 && (
+                      <Table>
+                        <THead>
+                          <tr>
+                            <TH>Velja od</TH>
+                            <TH className="text-right">Število</TH>
+                            <TH>Nastavil</TH>
+                          </tr>
+                        </THead>
+                        <tbody>
+                          {hist.map((r, i) => (
+                            <TR key={r.id}>
+                              <TD className="tabular">
+                                {formatDateTime(r.effective_from)} {i === 0 && <Badge tone="success">trenutno</Badge>}
+                              </TD>
+                              <TD className="text-right tabular">× {Number(r.value).toLocaleString("sl-SI")}</TD>
+                              <TD className="text-ink-2">{r.set_by ? nameOf(people, r.set_by) : "sistem"}</TD>
+                            </TR>
+                          ))}
+                        </tbody>
+                      </Table>
+                    )}
+                  </CardBody>
+                </Card>
+              );
+            })}
           <Card>
             <CardHeader title="Odprti termini" />
             {upcomingRows.length === 0 ? (

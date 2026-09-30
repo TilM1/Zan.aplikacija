@@ -73,6 +73,9 @@ export function generateDemoSeed(today = todayIso()): string {
   const jure = mk("Jure", "Golob", "caller", [{ from: d(-900), rate: "1.5" }]);
   const users = [owner, marko, luka, nina, ana, petra, jure];
 
+  // Specialisti: agent total = monthly premium × the agent's own number
+  const SPECIALIST_MULTIPLIER: Record<string, string> = { Tomaž: "14", Marko: "12", Luka: "10", Nina: "11" };
+
   const rateAt = (u: DemoUser, date: string) => [...(u.rates ?? [])].filter((r) => r.from <= date).sort((a, b) => b.from.localeCompare(a.from))[0].rate;
 
   sql(`-- ZAN CRM demo data — generated ${today}. Remove with supabase/seed/demo-cleanup.sql`);
@@ -104,6 +107,10 @@ values (${lit(randomUUID())}, ${lit(u.id)}, ${lit(u.id)}, ${lit({ sub: u.id, ema
         sql(`insert into public.activity_log (entity_type, entity_id, action, actor_id, visibility, old_value, new_value, created_at) values ('profile', ${lit(u.id)}, ${lit(action)}, ${lit(owner.id)}, 'owner', ${lit({ [key]: u.rates![0].rate })}, ${lit({ [key]: r.rate })}, ${at8});`);
       }
     }
+  }
+
+  for (const u of users.filter((x) => x.role !== "caller")) {
+    sql(`insert into public.agent_product_multipliers (agent_id, product_id, multiplier, effective_from, set_by, created_at) select ${lit(u.id)}, id, ${SPECIALIST_MULTIPLIER[u.first]}, ${lit(at(-900, "08:00"))}, ${lit(owner.id)}, ${lit(at(-900, "08:00"))} from public.products where name = 'Specialisti';`);
   }
 
   const products = {
@@ -201,7 +208,12 @@ values (${lit(apptId)}, ${lit(customerId)}, ${lit(step.agent.id)}, ${lit(caller?
           status = "won";
           const policyDate = d(step.day);
           const entries: PolicyEntry[] = step.policies!.map((p) => ({ product_id: p.product, monthly_premium: p.premium, duration_years: p.years, policy_date: policyDate, policy_number: p.number ?? null }));
-          const payload = buildPoliciesPayload(entries, { agentRatePercent: rateAt(step.agent, policyDate), callerMultiplier: caller ? rateAt(caller, policyDate) : null });
+          const payload = buildPoliciesPayload(entries, {
+            agentRatePercent: rateAt(step.agent, policyDate),
+            callerMultiplier: caller ? rateAt(caller, policyDate) : null,
+            productModels: { spec: "agent_multiplier" },
+            agentMultipliers: { spec: SPECIALIST_MULTIPLIER[step.agent.first] },
+          });
           payload.forEach((p, pi) => {
             const policyId = randomUUID();
             const key = step.policies![pi].product;
@@ -210,13 +222,13 @@ values (${lit(policyId)}, ${lit(customerId)}, ${lit(apptId)}, ${products[key]}, 
             log(customerId, "policy", policyId, "policy_created", step.agent.id, completedAt!, { product: productNames[key], monthly_premium: p.monthly_premium, duration_years: p.duration_years, policy_date: p.policy_date, agent_id: step.agent.id, caller_id: caller?.id ?? null });
 
             const commissions = [
-              { type: "agent", beneficiary: step.agent.id, plan: p.agent_commission, rate: p.agent_commission.rate_percent, mult: null as string | null, years: p.duration_years },
-              ...(p.caller_commission ? [{ type: "caller", beneficiary: caller!.id, plan: p.caller_commission, rate: null as string | null, mult: p.caller_commission.caller_multiplier, years: null as number | null }] : []),
+              { type: "agent", beneficiary: step.agent.id, plan: p.agent_commission, rate: p.agent_commission.rate_percent, mult: null as string | null, years: p.duration_years, model: p.agent_commission.calc_model, agentMult: p.agent_commission.agent_multiplier },
+              ...(p.caller_commission ? [{ type: "caller", beneficiary: caller!.id, plan: p.caller_commission, rate: null as string | null, mult: p.caller_commission.caller_multiplier, years: null as number | null, model: "standard", agentMult: null as string | null }] : []),
             ];
             for (const c of commissions) {
               const cid = randomUUID();
-              sql(`insert into public.commissions (id, policy_id, beneficiary_id, beneficiary_type, base_monthly_premium, base_duration_years, rate_percent, caller_multiplier, total_amount, policy_date, rule_version, calculation, created_at)
-values (${lit(cid)}, ${lit(policyId)}, ${lit(c.beneficiary)}, ${lit(c.type)}, ${p.monthly_premium}, ${lit(c.years)}, ${lit(c.rate)}, ${lit(c.mult)}, ${c.plan.total_amount}, ${lit(p.policy_date)}, ${lit(c.plan.rule_version)}, ${lit(c.plan.calculation)}, ${lit(completedAt)});`);
+              sql(`insert into public.commissions (id, policy_id, beneficiary_id, beneficiary_type, base_monthly_premium, base_duration_years, rate_percent, caller_multiplier, calc_model, agent_multiplier, total_amount, policy_date, rule_version, calculation, created_at)
+values (${lit(cid)}, ${lit(policyId)}, ${lit(c.beneficiary)}, ${lit(c.type)}, ${p.monthly_premium}, ${lit(c.years)}, ${lit(c.rate)}, ${lit(c.mult)}, ${lit(c.model)}, ${lit(c.agentMult)}, ${c.plan.total_amount}, ${lit(p.policy_date)}, ${lit(c.plan.rule_version)}, ${lit(c.plan.calculation)}, ${lit(completedAt)});`);
               log(customerId, "commission", cid, "commission_generated", step.agent.id, completedAt!, { beneficiary_type: c.type, beneficiary_id: c.beneficiary, total_amount: c.plan.total_amount, policy_id: policyId }, {}, "owner");
               for (const inst of c.plan.installments) {
                 // Older payouts are paid; the most recent payout cycle (last ~20 days) stays unpaid to demo "due"

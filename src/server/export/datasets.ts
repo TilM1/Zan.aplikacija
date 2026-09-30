@@ -58,7 +58,7 @@ export const EXPORT_DATASETS: ExportDataset[] = [
     description: "Vsi obroki z izračunom, zapadlostjo in statusom plačila",
     table: "commission_installments",
     select:
-      "id, commission_id, policy_id, beneficiary_id, beneficiary_type, kind, reverses_installment_id, installment_number, share_percent, amount, due_date, original_due_date, status, paid_at, paid_by, paid_amount, payment_note, cancelled_at, cancel_reason, created_at, commission:commissions(total_amount, base_monthly_premium, base_duration_years, rate_percent, caller_multiplier, policy_date, rule_version, calculation), beneficiary:profiles!commission_installments_beneficiary_id_fkey(first_name, last_name), policy:policies(customer_id, product_name, policy_number)",
+      "id, commission_id, policy_id, beneficiary_id, beneficiary_type, kind, reverses_installment_id, installment_number, share_percent, amount, due_date, original_due_date, status, paid_at, paid_by, paid_amount, payment_note, cancelled_at, cancel_reason, created_at, commission:commissions(total_amount, base_monthly_premium, base_duration_years, rate_percent, caller_multiplier, calc_model, agent_multiplier, policy_date, rule_version, calculation), beneficiary:profiles!commission_installments_beneficiary_id_fkey(first_name, last_name), policy:policies(customer_id, product_name, policy_number)",
     dateColumn: "due_date",
     order: "due_date",
     flatten: ({ commission, beneficiary, policy, ...r }) => {
@@ -75,6 +75,8 @@ export const EXPORT_DATASETS: ExportDataset[] = [
         base_duration_years: c.base_duration_years,
         rate_percent_at_sale: c.rate_percent,
         caller_multiplier: c.caller_multiplier,
+        calc_model: c.calc_model,
+        agent_multiplier: c.agent_multiplier,
         policy_date: c.policy_date,
         rule_version: c.rule_version,
         calculation: c.calculation ? (c.calculation as Record<string, unknown>).expression : "",

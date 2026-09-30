@@ -47,7 +47,7 @@ describe("demo seed", () => {
 
   it("snapshots Luka's old 10% rate on old policies and 12% on new ones", async () => {
     const rows = await db.query<{ rate: string; policy_date: string }>(
-      `select c.rate_percent::text rate, c.policy_date::text from commissions c join profiles p on p.id = c.beneficiary_id where p.first_name = 'Luka' order by c.policy_date`,
+      `select c.rate_percent::text rate, c.policy_date::text from commissions c join profiles p on p.id = c.beneficiary_id where p.first_name = 'Luka' and c.calc_model = 'standard' order by c.policy_date`,
     );
     expect(rows[0].rate).toBe("10.00"); // sold ~400 days ago
     expect(rows.at(-1)!.rate).toBe("12.00");

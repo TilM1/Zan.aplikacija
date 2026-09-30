@@ -6,14 +6,14 @@ import type { Role } from "@/types/domain";
 
 export type NavIcon =
   | "dashboard" | "pipeline" | "calendar" | "customers" | "policies" | "employees" | "payroll"
-  | "reports" | "export" | "settings" | "new" | "followups" | "appointments" | "production" | "earnings" | "profile";
+  | "reports" | "export" | "settings" | "new" | "followups" | "appointments" | "production" | "earnings" | "profile" | "leads";
 
 export interface NavItem {
   href: string;
   label: string;
   icon: NavIcon;
   /** Show a live counter badge (key into NavCounts). */
-  badge?: "followups" | "pendingResults";
+  badge?: "followups" | "pendingResults" | "leadsDue";
 }
 
 export interface NavSection {
@@ -36,11 +36,12 @@ export const NAVIGATION: Record<Role, NavSection[]> = {
       title: "Uprava",
       items: [
         { href: "/appointments/new", label: "Nov termin", icon: "new" },
+        { href: "/leads", label: "Klicni seznami", icon: "leads" },
         { href: "/follow-ups", label: "Klici nazaj", icon: "followups", badge: "followups" },
         { href: "/employees", label: "Zaposleni", icon: "employees" },
         { href: "/payroll", label: "Provizije in izplačila", icon: "payroll" },
         { href: "/reports", label: "Poročila", icon: "reports" },
-        { href: "/export", label: "Izvoz podatkov", icon: "export" },
+        { href: "/export", label: "Uvoz / izvoz", icon: "export" },
         { href: "/settings", label: "Nastavitve", icon: "settings" },
       ],
     },
@@ -67,6 +68,7 @@ export const NAVIGATION: Record<Role, NavSection[]> = {
     {
       items: [
         { href: "/dashboard", label: "Nadzorna plošča", icon: "dashboard" },
+        { href: "/leads", label: "Klicni seznam", icon: "leads", badge: "leadsDue" },
         { href: "/appointments/new", label: "Nov termin", icon: "new" },
         { href: "/customers", label: "Moje stranke", icon: "customers" },
         { href: "/follow-ups", label: "Klici nazaj", icon: "followups", badge: "followups" },
@@ -95,5 +97,6 @@ export const ROUTE_ACCESS: Record<string, Role[]> = {
   "/payroll": ["owner"],
   "/reports": ["owner"],
   "/export": ["owner"],
+  "/leads": ["owner", "caller"],
   "/settings": ["owner"],
 };

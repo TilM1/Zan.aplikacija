@@ -53,6 +53,10 @@ async function main() {
       await tx`delete from public.agent_commission_rates`;
       await tx`delete from public.caller_commission_rates`;
       await tx`delete from public.login_attempts`;
+      await tx`delete from public.lead_lists`; // cascades to leads + lead_events
+      // Do-not-call numbers are kept on purpose (GDPR objection must survive resets)
+      await tx`update public.lead_suppressions set created_by = null`;
+      await tx`update public.app_settings set updated_by = null`;
       await tx`delete from public.profiles`;
       await tx`delete from auth.users`;
       return before;

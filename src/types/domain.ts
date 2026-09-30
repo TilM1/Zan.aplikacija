@@ -180,3 +180,60 @@ export interface ActivityRow {
   metadata: Record<string, unknown>;
   created_at: string;
 }
+
+// ---------------------------------------------------------------------------
+// Call lists
+// ---------------------------------------------------------------------------
+export type LeadStatus = "new" | "callback" | "rejected" | "appointment" | "do_not_call";
+
+export interface LeadList {
+  id: string;
+  name: string;
+  source_file_name: string | null;
+  status: "importing" | "ready" | "archived";
+  assigned_caller_id: string | null;
+  total_rows: number;
+  imported_count: number;
+  skipped_duplicates: number;
+  skipped_suppressed: number;
+  skipped_invalid: number;
+  imported_by: string;
+  created_at: string;
+}
+
+export interface Lead {
+  id: string;
+  list_id: string;
+  row_number: number | null;
+  name: string;
+  phone: string;
+  phone_normalized: string;
+  street: string | null;
+  postal_code: string | null;
+  city: string | null;
+  activity: string | null;
+  tax_number: string | null;
+  email: string | null;
+  extra: Record<string, string>;
+  status: LeadStatus;
+  next_call_at: string | null;
+  last_contacted_at: string | null;
+  last_contacted_by: string | null;
+  contact_count: number;
+  last_comment: string | null;
+  customer_id: string | null;
+  existing_customer_id: string | null;
+  created_at: string;
+}
+
+export interface LeadEvent {
+  id: number;
+  lead_id: string;
+  actor_id: string | null;
+  action: "status_changed" | "comment" | "converted";
+  status_from: LeadStatus | null;
+  status_to: LeadStatus | null;
+  next_call_at: string | null;
+  comment: string | null;
+  created_at: string;
+}

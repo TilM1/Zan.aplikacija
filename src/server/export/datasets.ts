@@ -11,6 +11,8 @@ export interface ExportDataset {
   select: string;
   /** Column used for the optional from/to filter. */
   dateColumn?: string;
+  /** Column filtered by ?list=<id> (call lists). */
+  listColumn?: string;
   order: string;
   /** Flatten embedded relations into extra columns. */
   flatten?: (row: Record<string, unknown>) => Record<string, unknown>;
@@ -97,6 +99,32 @@ export const EXPORT_DATASETS: ExportDataset[] = [
         caller_multiplier_history: mult.map((x) => `${x.effective_from.slice(0, 10)}:${x.multiplier}`).join(" | "),
       };
     },
+  },
+  {
+    key: "leads",
+    label: "Klicni seznami – kontakti",
+    description: "Vsi kontakti s seznamom (mapo), statusom, naslednjim klicem, komentarjem in vsemi stolpci iz uvožene datoteke",
+    table: "leads",
+    select:
+      "id, list_id, row_number, name, phone, phone_normalized, street, postal_code, city, activity, tax_number, email, status, next_call_at, last_contacted_at, contact_count, last_comment, customer_id, existing_customer_id, created_at, extra, list:lead_lists(name), caller:profiles!leads_last_contacted_by_fkey(first_name, last_name)",
+    dateColumn: "created_at",
+    listColumn: "list_id",
+    order: "row_number",
+    flatten: ({ list, caller, extra, ...r }) => ({
+      list_name: (list as { name?: string } | null)?.name ?? "",
+      ...r,
+      last_contacted_by_name: person(caller),
+      ...((extra ?? {}) as Record<string, unknown>),
+    }),
+  },
+  {
+    key: "lead_lists",
+    label: "Klicni seznami – pregled",
+    description: "Uvoženi seznami (mape): datoteka, datum, klicateljica, število uvoženih in preskočenih vrstic",
+    table: "lead_lists",
+    select: "id, name, source_file_name, status, assigned_caller_id, total_rows, imported_count, skipped_duplicates, skipped_suppressed, skipped_invalid, imported_by, created_at",
+    dateColumn: "created_at",
+    order: "created_at",
   },
   {
     key: "followups",

@@ -22,6 +22,8 @@ Enforcement layers:
 | Caller commission multipliers | all | – | own only |
 | Activity timeline | all | team events of visible customers (financial events hidden) | same |
 | Products | all | all | all |
+| Call lists (lead_lists / leads / history) | all | – | ready lists assigned to them or to all callers |
+| Do-not-call list (lead_suppressions) | server only | – | – |
 | Export / backup | ✔ | – | – |
 
 ## Action matrix
@@ -40,6 +42,8 @@ Enforcement layers:
 | Mark payouts paid | ✔ | – | – |
 | Create/edit/deactivate employees, set agent rates and caller multipliers, reset passwords | ✔ | – | – |
 | Manage products | ✔ | – | – |
+| Import / rename / assign / archive / delete call lists, set recall period | ✔ | – | – |
+| Set contact status (callback, rejected, do-not-call), comment, convert to appointment | ✔ | – | contacts in their lists |
 | Reports, payroll overview, export | ✔ | own production/earnings | own production/earnings |
 
 ## Guarantees verified by tests (`tests/db/workflows.test.ts`)

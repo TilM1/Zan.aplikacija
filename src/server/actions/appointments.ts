@@ -6,6 +6,7 @@ import { requireActor } from "@/lib/auth";
 import { localDateTimeToIso } from "@/lib/dates";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { normalizePhone } from "@/lib/phone";
 import { newCustomerAppointmentSchema, scheduleAppointmentSchema, updateAppointmentSchema } from "@/lib/validation";
 import { callWorkflow, runAction, type ActionResult } from "@/server/workflow";
 
@@ -24,7 +25,7 @@ export async function createCustomerWithAppointment(input: unknown): Promise<Act
     const { userId, profile } = await requireActor();
     const v = newCustomerAppointmentSchema.parse(input);
 
-    if (!v.confirm_duplicate) {
+    if (!v.confirm_duplicate && !v.lead_id) {
       const matches = await findDuplicates(v.phone, v.email);
       if (matches.length > 0) return { status: "duplicate", matches } as const;
     }
@@ -47,6 +48,7 @@ export async function createCustomerWithAppointment(input: unknown): Promise<Act
         note: v.appointment.note,
         caller_id: profile.role === "owner" ? v.caller_id || null : null,
       },
+      p_lead_id: v.lead_id || null,
     });
     revalidatePath("/", "layout");
     return { status: "created", ...res } as const;
@@ -56,7 +58,7 @@ export async function createCustomerWithAppointment(input: unknown): Promise<Act
 /** Existing active customers with the same phone or e-mail. Hides names the user may not see. */
 async function findDuplicates(phone: string, email: string): Promise<DuplicateMatch[]> {
   const admin = createAdminClient();
-  const normalized = phone.replace(/[^0-9+]/g, "");
+  const normalized = normalizePhone(phone) ?? "";
   const filters = [`phone_normalized.eq.${normalized}`];
   if (email) filters.push(`email.eq.${email}`);
   const { data } = await admin

@@ -58,6 +58,7 @@ export const newCustomerAppointmentSchema = customerSchema.extend({
   appointment: appointmentSlotSchema,
   caller_id: z.string().uuid().optional().or(z.literal("")),
   confirm_duplicate: z.boolean().optional().default(false),
+  lead_id: z.string().uuid().optional().or(z.literal("")),
 });
 
 export const scheduleAppointmentSchema = appointmentSlotSchema.extend({

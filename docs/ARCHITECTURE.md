@@ -91,3 +91,19 @@ Every step writes `activity_log` rows that form the customer timeline.
 - `src/lib/commission/engine.test.ts`: formulas, splits, rounding, cutoff dates, multiple policies, snapshots.
 - `tests/db/workflows.test.ts`: the **real migration files** run in PGlite (in-process Postgres) with Supabase auth/storage stubs. Covers Caller flow, A, A0, B → Caller → new appointment (with reassignment), A1 with multiple policies, commission snapshots after a rate change, tampered amounts rejected by the DB, payroll ledger finality, delete protection, and RLS isolation between Owner, Agents and Callers.
 - `tests/db/demo-seed.test.ts`: the generated demo seed satisfies every constraint, and the purge removes only demo data.
+
+## Call lists (klicni seznami)
+
+| Table | Purpose |
+|---|---|
+| `lead_lists` | One row per imported file ("mapa"): name, file, optional assigned caller, import counters, status `importing → ready → archived`. |
+| `leads` | Contacts. **Unique per normalised phone across all lists** (re-imports skip known numbers). Mapped columns plus `extra` jsonb with every other spreadsheet column. Current `status`, `next_call_at`, last contact and comment. `customer_id` is set when converted to an appointment. |
+| `lead_events` | Append-only history of status changes, comments and conversions. |
+| `lead_suppressions` | "Do not call" numbers (GDPR objection). They survive list deletion and block future imports. |
+| `app_settings` | `lead_rejected_recall_months`, set by the Owner. |
+
+Import runs in the browser: the file is parsed there (`read-excel-file` / `papaparse`), columns are auto-detected (`src/lib/leads/import.ts`), and rows are sent in about 700 KB chunks to `crm_import_leads`, which does a set-based insert with `on conflict do nothing`. A 50,000-row import is covered by tests.
+
+"Za klic" (due) = `status = new` OR (`callback`/`rejected` AND `next_call_at <= now()`). Rejected leads get `next_call_at = now() + recall months`. Converting a lead calls `crm_create_customer_with_appointment(..., p_lead_id)` in the same transaction.
+
+Phone numbers are normalised identically in SQL (`crm_normalize_phone`, also used for `customers.phone_normalized`) and TypeScript (`src/lib/phone.ts`).

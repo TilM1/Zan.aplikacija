@@ -11,12 +11,13 @@ export const maxDuration = 60;
 
 const DATE_ONLY = new Set(["policy_date", "due_date"]);
 
-async function fetchAll(ds: ExportDataset, from?: string, to?: string) {
+async function fetchAll(ds: ExportDataset, from?: string, to?: string, list?: string) {
   const supabase = await createClient();
   const rows: Record<string, unknown>[] = [];
   const PAGE = 1000;
   for (let offset = 0; ; offset += PAGE) {
     let q = supabase.from(ds.table).select(ds.select).order(ds.order).range(offset, offset + PAGE - 1);
+    if (ds.listColumn && list) q = q.eq(ds.listColumn, list);
     if (ds.dateColumn && from) q = q.gte(ds.dateColumn, DATE_ONLY.has(ds.dateColumn) ? from : dayBoundsIso(from).start);
     if (ds.dateColumn && to) q = DATE_ONLY.has(ds.dateColumn) ? q.lte(ds.dateColumn, to) : q.lt(ds.dateColumn, dayBoundsIso(addDays(to, 1)).start);
     const { data, error } = await q;
@@ -50,6 +51,8 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/export/[data
   const format = req.nextUrl.searchParams.get("format") === "xlsx" ? "xlsx" : "csv";
   const from = req.nextUrl.searchParams.get("from") ?? undefined;
   const to = req.nextUrl.searchParams.get("to") ?? undefined;
+  const listParam = req.nextUrl.searchParams.get("list") ?? undefined;
+  const list = listParam && /^[0-9a-f-]{36}$/i.test(listParam) ? listParam : undefined;
   if ((from && !isValidIsoDate(from)) || (to && !isValidIsoDate(to))) return NextResponse.json({ error: "Invalid date" }, { status: 400 });
 
   const stamp = todayIso();
@@ -63,14 +66,15 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/export/[data
       for (const ds of EXPORT_DATASETS) addSheet(wb, ds.label, await fetchAll(ds, from, to));
       const buf = await wb.xlsx.writeBuffer();
       return new NextResponse(buf, {
-        headers: { ...headers, "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="zan-crm-izvoz-vse-${stamp}.xlsx"` },
+        headers: { ...headers, "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="coremark-izvoz-vse-${stamp}.xlsx"` },
       });
     }
 
     const ds = EXPORT_DATASETS.find((d) => d.key === dataset);
     if (!ds) return NextResponse.json({ error: "Unknown dataset" }, { status: 404 });
-    const rows = await fetchAll(ds, from, to);
-    const base = `zan-crm-${ds.key}-${stamp}${from || to ? `_${from ?? ""}_${to ?? ""}` : ""}`;
+    const rows = await fetchAll(ds, from, to, list);
+    const listName = list && rows[0] && typeof rows[0].list_name === "string" ? `-${String(rows[0].list_name).replace(/[^\w-]+/g, "_").slice(0, 40)}` : "";
+    const base = `coremark-${ds.key}${listName}-${stamp}${from || to ? `_${from ?? ""}_${to ?? ""}` : ""}`;
 
     if (format === "xlsx") {
       const wb = new ExcelJS.Workbook();

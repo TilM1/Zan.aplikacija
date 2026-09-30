@@ -3,6 +3,7 @@
  * database; the UI always shows these labels.
  */
 import type {
+  LeadStatus,
   AppointmentStatus,
   ConsultationResult,
   CustomerStatus,
@@ -85,6 +86,17 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   agent_rate_changed: "Odstotek provizije spremenjen",
   caller_multiplier_changed: "Provizija klicatelja spremenjena",
   product_saved: "Produkt shranjen",
+  lead_list_imported: "Klicni seznam uvožen",
+  lead_list_deleted: "Klicni seznam izbrisan",
+  setting_changed: "Nastavitev spremenjena",
 };
 
 export const BENEFICIARY_LABELS = { agent: "Zastopnik", caller: "Klicatelj" } as const;
+
+export const LEAD_STATUS_LABELS: Record<LeadStatus, { label: string; tone: Tone; hint: string }> = {
+  new: { label: "Nov", tone: "info", hint: "Še ni bil klican" },
+  callback: { label: "Ponovni klic", tone: "warning", hint: "Pokliči ponovno na izbrani dan" },
+  rejected: { label: "Zavrnjen", tone: "neutral", hint: "Ponovni klic čez daljše obdobje" },
+  appointment: { label: "Termin", tone: "success", hint: "Termin dogovorjen – stranka v CRM" },
+  do_not_call: { label: "Ne kliči", tone: "danger", hint: "Ne želi klicev (trajno)" },
+};

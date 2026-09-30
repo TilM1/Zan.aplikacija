@@ -6,7 +6,7 @@ import type { NavSection } from "@/config/navigation";
 import { NavIcon } from "./nav-icon";
 import { cn } from "@/lib/utils";
 
-export type NavCounts = { followups?: number; pendingResults?: number };
+export type NavCounts = { followups?: number; pendingResults?: number; leadsDue?: number };
 
 export function SidebarNav({ sections, counts, onNavigate }: { sections: NavSection[]; counts: NavCounts; onNavigate?: () => void }) {
   const pathname = usePathname();

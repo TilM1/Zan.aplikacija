@@ -15,11 +15,18 @@ import type { PersonOption } from "@/server/queries/people";
 const emptyCustomer = { first_name: "", last_name: "", phone: "", email: "", address: "", postal_code: "", city: "" };
 
 /** Caller workflow: confirmed appointment → new customer + appointment for an agent. */
-export function NewAppointmentForm({ agents, callers, isOwner }: { agents: PersonOption[]; callers: PersonOption[]; isOwner: boolean }) {
+export interface AppointmentPrefill {
+  leadId: string;
+  leadName: string;
+  customer: typeof emptyCustomer;
+  note: string;
+}
+
+export function NewAppointmentForm({ agents, callers, isOwner, prefill }: { agents: PersonOption[]; callers: PersonOption[]; isOwner: boolean; prefill?: AppointmentPrefill }) {
   const router = useRouter();
   const { submit, pending, error, fieldErrors } = useSubmit<CreateCustomerResult>();
-  const [customer, setCustomer] = useState(emptyCustomer);
-  const [slot, setSlot] = useState<SlotValue>(emptySlot());
+  const [customer, setCustomer] = useState(prefill?.customer ?? emptyCustomer);
+  const [slot, setSlot] = useState<SlotValue>({ ...emptySlot(), note: prefill?.note ?? "" });
   const [callerId, setCallerId] = useState("");
   const [duplicates, setDuplicates] = useState<DuplicateMatch[] | null>(null);
 
@@ -28,7 +35,7 @@ export function NewAppointmentForm({ agents, callers, isOwner }: { agents: Perso
 
   async function save(confirmDuplicate: boolean) {
     const res = await submit(() =>
-      createCustomerWithAppointment({ ...customer, appointment: slot, caller_id: callerId, confirm_duplicate: confirmDuplicate }),
+      createCustomerWithAppointment({ ...customer, appointment: slot, caller_id: callerId, confirm_duplicate: confirmDuplicate, lead_id: prefill?.leadId ?? "" }),
     );
     if (!res?.ok) return;
     if (res.data.status === "duplicate") {
@@ -46,6 +53,11 @@ export function NewAppointmentForm({ agents, callers, isOwner }: { agents: Perso
       }}
       className="grid gap-4 xl:grid-cols-5"
     >
+      {prefill && (
+        <div className="rounded-xl border border-gold bg-gold-soft px-4 py-3 text-sm xl:col-span-5">
+          Termin iz klicnega seznama: <b>{prefill.leadName}</b>. Podatki so izpolnjeni iz seznama – preverite ime in priimek osebe ter izberite zastopnika in termin.
+        </div>
+      )}
       <Card className="xl:col-span-3">
         <CardHeader title={<StepTitle n={1}>Stranka</StepTitle>} description="Podatki za obisk na terenu" />
         <CardBody className="grid grid-cols-1 gap-3 sm:grid-cols-6">

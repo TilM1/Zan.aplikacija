@@ -2,6 +2,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/types/domain";
 import type { NavCounts } from "@/components/layout/sidebar";
+import { countDueLeads } from "@/server/queries/leads";
 
 export async function getNavCounts(profile: Profile): Promise<NavCounts> {
   const supabase = await createClient();
@@ -24,6 +25,7 @@ export async function getNavCounts(profile: Profile): Promise<NavCounts> {
         .then(({ count }) => void (counts.pendingResults = count ?? 0)),
     );
   }
+  if (profile.role === "caller") tasks.push(countDueLeads().then((n) => void (counts.leadsDue = n)));
   await Promise.all(tasks);
   return counts;
 }

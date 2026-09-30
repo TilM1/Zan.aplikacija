@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, ClipboardCheck, Coins, KanbanSquare, PhoneCall, PlusCircle, UserPlus, Users, Wallet, type LucideIcon } from "lucide-react";
+import { CalendarDays, ClipboardCheck, Coins, KanbanSquare, ListChecks, PhoneCall, PlusCircle, UserPlus, Users, Wallet, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { todayIso } from "@/lib/dates";
 import { getNavCounts } from "@/server/queries/nav";
@@ -32,10 +32,10 @@ export async function QuickActions({ profile }: { profile: Profile }) {
   const actions: Action[] =
     profile.role === "caller"
       ? [
-          { href: "/appointments/new", title: "Nov termin", hint: "Stranka je potrdila termin", icon: PlusCircle, primary: true },
+          { href: "/leads", title: "Klicni seznam", hint: "Kontakti za klic danes", icon: ListChecks, primary: true, count: counts.leadsDue },
           { href: "/follow-ups", title: "Klici nazaj", hint: "Stranke, ki jih ni bilo doma", icon: PhoneCall, count: counts.followups },
+          { href: "/appointments/new", title: "Nov termin", hint: "Stranka je potrdila termin", icon: PlusCircle },
           { href: "/appointments", title: "Moji termini", hint: "Kaj se je zgodilo s termini", icon: CalendarDays },
-          { href: "/earnings", title: "Moji zaslužki", hint: "Provizije in izplačila", icon: Coins },
         ]
       : profile.role === "agent"
         ? [

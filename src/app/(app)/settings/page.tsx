@@ -5,12 +5,14 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { KeyValue, PageHeader } from "@/components/ui/misc";
 import { ProductsEditor } from "@/components/settings/products-editor";
 import { getAllProducts } from "@/server/queries/policies";
+import { getRecallMonths } from "@/server/queries/leads";
+import { RecallForm } from "@/components/settings/recall-form";
 
 export const metadata: Metadata = { title: "Nastavitve" };
 
 export default async function SettingsPage() {
   await requireSession(["owner"]);
-  const products = await getAllProducts();
+  const [products, recallMonths] = await Promise.all([getAllProducts(), getRecallMonths()]);
   const r = COMMISSION_RULES;
   return (
     <>
@@ -35,6 +37,12 @@ export default async function SettingsPage() {
                 { label: "Posnetki (snapshot)", value: "Odstotek/faktor, premija, trajanje in pravila se ob sklenitvi shranijo k proviziji. Kasnejše spremembe ne vplivajo na obstoječe provizije." },
               ]}
             />
+          </CardBody>
+        </Card>
+        <Card className="xl:col-span-2">
+          <CardHeader title="Klicni seznami – ponovni klic po zavrnitvi" description="Ko klicateljica označi kontakt kot »Zavrnjen«, se ta čez izbrano obdobje ponovno pojavi v seznamu »Za klic«." />
+          <CardBody>
+            <RecallForm current={recallMonths} />
           </CardBody>
         </Card>
       </div>

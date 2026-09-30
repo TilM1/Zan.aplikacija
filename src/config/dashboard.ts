@@ -15,22 +15,23 @@ export type WidgetKey =
   | "upcomingPayouts"
   | "obligations"
   | "recentActivity"
-  | "followups";
+  | "followups"
+  | "leaderboard";
 
 export const DASHBOARD_LAYOUT: Record<Role, { top: WidgetKey[]; main: WidgetKey[]; side: WidgetKey[] }> = {
   owner: {
     main: ["kpis", "today", "productionByAgent", "productionByCaller", "recentActivity"],
     top: ["quickActions"],
-    side: ["results", "obligations", "upcomingPayouts", "upcoming"],
+    side: ["leaderboard", "results", "obligations", "upcomingPayouts", "upcoming"],
   },
   agent: {
     main: ["kpis", "today", "upcoming"],
-    side: ["results", "upcomingPayouts"],
+    side: ["leaderboard", "results", "upcomingPayouts"],
     top: ["quickActions"],
   },
   caller: {
     main: ["kpis", "followups", "upcoming"],
-    side: ["results", "upcomingPayouts"],
+    side: ["leaderboard", "results", "upcomingPayouts"],
     top: ["quickActions"],
   },
 };

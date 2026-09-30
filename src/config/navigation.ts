@@ -6,7 +6,7 @@ import type { Role } from "@/types/domain";
 
 export type NavIcon =
   | "dashboard" | "pipeline" | "calendar" | "customers" | "policies" | "employees" | "payroll"
-  | "reports" | "export" | "settings" | "new" | "followups" | "appointments" | "production" | "earnings" | "profile" | "leads" | "trash" | "renewals";
+  | "reports" | "export" | "settings" | "new" | "followups" | "appointments" | "production" | "earnings" | "profile" | "leads" | "trash" | "renewals" | "trophy";
 
 export interface NavItem {
   href: string;
@@ -28,6 +28,7 @@ const AGENT_WORK: NavItem[] = [
   { href: "/customers", label: "Stranke", icon: "customers" },
   { href: "/renewals", label: "Skadence", icon: "renewals", badge: "expiriesDue" },
   { href: "/policies", label: "Police", icon: "policies" },
+  { href: "/leaderboard", label: "Lestvica", icon: "trophy" },
 ];
 
 export const NAVIGATION: Record<Role, NavSection[]> = {
@@ -76,6 +77,7 @@ export const NAVIGATION: Record<Role, NavSection[]> = {
         { href: "/customers", label: "Moje stranke", icon: "customers" },
         { href: "/follow-ups", label: "Klici nazaj", icon: "followups", badge: "followups" },
         { href: "/appointments", label: "Termini", icon: "appointments" },
+        { href: "/leaderboard", label: "Lestvica", icon: "trophy" },
       ],
     },
     {

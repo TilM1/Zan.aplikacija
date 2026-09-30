@@ -5,6 +5,7 @@ import { todayIso, formatDate } from "@/lib/dates";
 import { DASHBOARD_LAYOUT, type WidgetKey } from "@/config/dashboard";
 import { PageHeader } from "@/components/ui/misc";
 import { QuickActions } from "@/components/dashboard/quick-actions";
+import { LeaderboardWidget } from "@/components/dashboard/leaderboard-widget";
 import {
   FollowupsWidget, KpisWidget, ObligationsWidget, ProductionByAgentWidget, ProductionByCallerWidget,
   RecentActivityWidget, ResultsWidget, TodayWidget, UpcomingPayoutsWidget, UpcomingWidget, type WidgetContext,
@@ -14,6 +15,7 @@ export const metadata: Metadata = { title: "Nadzorna plošča" };
 
 const WIDGETS: Record<WidgetKey, (ctx: WidgetContext) => ReactNode> = {
   quickActions: (ctx) => <QuickActions profile={ctx.profile} />,
+  leaderboard: () => <LeaderboardWidget />,
   kpis: (ctx) => <KpisWidget ctx={ctx} />,
   today: (ctx) => <TodayWidget ctx={ctx} />,
   upcoming: (ctx) => <UpcomingWidget ctx={ctx} />,

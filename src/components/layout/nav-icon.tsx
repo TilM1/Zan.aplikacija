@@ -1,6 +1,6 @@
 import {
   BarChart3, CalendarDays, CircleUserRound, ClipboardList, Download, FileText, KanbanSquare, LayoutDashboard,
-  PhoneCall, PlusCircle, Settings, TrendingUp, Users, UsersRound, Wallet, Coins, ListChecks, ArchiveRestore, CalendarClock,
+  PhoneCall, PlusCircle, Settings, TrendingUp, Users, UsersRound, Wallet, Coins, ListChecks, ArchiveRestore, CalendarClock, Trophy,
 } from "lucide-react";
 import type { NavIcon as NavIconName } from "@/config/navigation";
 
@@ -24,6 +24,7 @@ const ICONS = {
   leads: ListChecks,
   trash: ArchiveRestore,
   renewals: CalendarClock,
+  trophy: Trophy,
 } as const;
 
 export function NavIcon({ name, className }: { name: NavIconName; className?: string }) {

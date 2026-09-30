@@ -17,14 +17,15 @@ export default async function SettingsPage() {
       <PageHeader title="Nastavitve" />
       <div className="grid gap-4 xl:grid-cols-2">
         <Card>
-          <CardHeader title="Produkti" description="Neaktivni produkti se ne ponujajo pri novih policah; obstoječe police ostanejo nespremenjene." />
+          <CardHeader title="Produkti" description="Produkti, ki jih zastopnik izbira pri vnosu police. S puščicama določite vrstni red v seznamu. Neaktiven produkt se ne ponuja več, obstoječe police ostanejo." />
           <ProductsEditor products={products} />
         </Card>
         <Card>
-          <CardHeader title="Pravila provizij" description={`Različica ${r.version} · spremembe zahtevajo posodobitev src/lib/commission/rules.ts`} />
+          <CardHeader title="Pravila provizij" description="Kako se obračunajo provizije (samo pregled)" />
           <CardBody>
             <KeyValue
               className="sm:grid-cols-1"
+              wrap
               items={[
                 { label: "Provizija zastopnika", value: "mesečna premija × 12 × trajanje (leta) × odstotek zastopnika ob prodaji" },
                 { label: "Obroki zastopnika", value: r.agentInstallments.map((i) => `${i.number}. obrok ${i.sharePercent} % (+${i.monthsAfterFirstPayout} mes. od 1. izplačila)`).join(" · ") },

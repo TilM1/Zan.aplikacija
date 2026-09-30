@@ -109,13 +109,13 @@ function PageLink({ href, disabled, children }: { href: string; disabled: boolea
   );
 }
 
-export function KeyValue({ items, className }: { items: { label: string; value: ReactNode }[]; className?: string }) {
+export function KeyValue({ items, className, wrap = false }: { items: { label: string; value: ReactNode }[]; className?: string; wrap?: boolean }) {
   return (
     <dl className={cn("grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2", className)}>
       {items.map((i) => (
         <div key={i.label} className="min-w-0">
           <dt className="text-xs text-ink-3">{i.label}</dt>
-          <dd className="mt-0.5 truncate text-sm text-ink">{i.value ?? "–"}</dd>
+          <dd className={cn("mt-0.5 text-sm text-ink", wrap ? "break-words" : "truncate")}>{i.value ?? "–"}</dd>
         </div>
       ))}
     </dl>

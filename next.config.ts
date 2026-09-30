@@ -16,6 +16,8 @@ const csp = [
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
   `connect-src 'self' ${supabaseUrl}${isDev ? " ws: wss:" : ""}`,
+  // Web Workers (Excel import parsing) are bootstrapped from blob: URLs by the bundler
+  "worker-src 'self' blob:",
   "frame-src 'none'",
   "frame-ancestors 'none'",
   "object-src 'none'",

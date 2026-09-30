@@ -69,6 +69,20 @@ describe("import", () => {
   });
 });
 
+describe("direct browser import (crm_import_leads_as_owner)", () => {
+  it("works for the owner's session, parallel chunks, and is rejected for others", async () => {
+    const list = await newList(null, "Direktno");
+    const call = (user: string, rows: unknown[], claims: Record<string, unknown> = {}) =>
+      db.asUser<{ r: Record<string, number> }>(user, `select public.crm_import_leads_as_owner($1, $2) r`, [list, JSON.stringify(rows)], claims);
+    const [a, b] = await Promise.all([call(owner, [row(2, "38652000001"), row(3, "38652000002")]), call(owner, [row(4, "38652000003"), row(5, "38652000001")])]);
+    expect(a[0].r.inserted + b[0].r.inserted).toBe(3);
+    await expect(call(ana, [row(6, "38652000009")])).rejects.toThrow(/samo lastnik/);
+    await expect(call(owner, [row(7, "38652000010")], { app_metadata: { must_change_password: true } })).rejects.toThrow(/samo lastnik/);
+    const counts = await db.one<{ imported_count: number; skipped_duplicates: number }>(`select imported_count, skipped_duplicates from lead_lists where id = $1`, [list]);
+    expect(counts).toEqual({ imported_count: 3, skipped_duplicates: 1 });
+  });
+});
+
 describe("access", () => {
   it("callers see ready lists for all callers or assigned to them; agents see none", async () => {
     const forBor = await newList(bor, "Samo Bor");

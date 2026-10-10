@@ -49,7 +49,9 @@ The insurer pays the agency per policy. The rate is set per product in Settings 
 | standard (bonus, kasko) | premium × 12 × years × **6 %** |
 | agent_multiplier (Specialisti) | premium × **10.25** |
 
-It is snapshotted per policy at sale in `policy_agency_commissions`, which is **owner-only** (RLS). The table is filled by a trigger when a policy is inserted. The **owner's earnings** per policy are `agency − caller commission − agent commission`. When the owner is the selling agent, the agent part stays with him, so he keeps `agency − caller`. Cancelled (storno) policies are excluded. Figures are shown by policy date; the insurer's payment timing is not modelled.
+It is snapshotted per policy at sale in `policy_agency_commissions`, which is **owner-only** (RLS). The table is filled by a trigger when a policy is inserted. The **owner's earnings** per policy are `agency − caller commission − agent commission`. When the owner is the selling agent, the agent part stays with him, so he keeps `agency − caller`. Cancelled (storno) policies are excluded.
+
+"Moji zaslužki" shows these figures **by payout date** (`src/lib/commission/owner-cashflow.ts`): the agency commission is assumed to arrive on the same schedule as agent installments (55/20/25 % at +0/+12/+24 months; 11 monthly installments for "premija × število" products), and agent/caller commissions are deducted on their own due dates. The "Po letih" table splits each payout year into earnings from policies signed that year ("nove police") and later installments of earlier policies ("prejšnje police").
 
 ## Payout timing
 

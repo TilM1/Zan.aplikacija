@@ -11,7 +11,7 @@ import { ByMonthCard, summarize } from "@/components/payroll/summaries";
 import { getInstallmentsForSummary, LEDGER_SORTS, listLedger, type LedgerFilters } from "@/server/queries/payroll";
 import { buildSortHrefs } from "@/lib/sort-links";
 import { getPeople } from "@/server/queries/people";
-import { getOwnerEarnings } from "@/server/queries/owner-earnings";
+import { getOwnerEarnings, totalsOf } from "@/server/queries/owner-earnings";
 import { OwnerEarnings } from "@/components/payroll/owner-earnings";
 import { addDays, addMonthsToMonthStart, formatMonth, monthStart } from "@/lib/dates";
 
@@ -32,30 +32,46 @@ export default async function EarningsPage({ searchParams }: PageProps<"/earning
   ]);
   const names = Object.fromEntries([...people.values()].map((p) => [p.id, `${p.first_name} ${p.last_name}`]));
 
-  // Owner: agency earnings (insurer commission − agents − callers)
-  const periods = [
+  // Owner: agency earnings (insurer commission − agents − callers), by payout date
+  const thisYear = today.slice(0, 4);
+  const nextYear = String(Number(thisYear) + 1);
+  const yearParam = /^\d{4}$/.test(param(sp, "period") ?? "") ? param(sp, "period")! : null;
+  const periods: { key: string; label: string; from: string | null; to: string | null }[] = [
     { key: "month", label: "Ta mesec", from: monthStart(today), to: addDays(addMonthsToMonthStart(today, 1), -1) },
     { key: "last", label: "Prejšnji mesec", from: addMonthsToMonthStart(today, -1), to: addDays(monthStart(today), -1) },
-    { key: "year", label: "Letos", from: `${today.slice(0, 4)}-01-01`, to: `${today.slice(0, 4)}-12-31` },
+    { key: "year", label: `Letos (${thisYear})`, from: `${thisYear}-01-01`, to: `${thisYear}-12-31` },
+    { key: "next", label: `Naslednje leto (${nextYear})`, from: `${nextYear}-01-01`, to: `${nextYear}-12-31` },
+    ...(yearParam && yearParam !== thisYear && yearParam !== nextYear ? [{ key: yearParam, label: yearParam, from: `${yearParam}-01-01`, to: `${yearParam}-12-31` }] : []),
     { key: "all", label: "Vse", from: null, to: null },
-  ] as const;
-  const period = periods.find((p) => p.key === param(sp, "period")) ?? periods[0];
-  const owner = profile.role === "owner" ? await getOwnerEarnings(profile.id, period.from, period.to) : null;
-  const periodLabel = period.key === "month" || period.key === "last" ? formatMonth(period.from!) : period.label.toLowerCase();
+  ];
+  const periodKey = yearParam === thisYear ? "year" : yearParam === nextYear ? "next" : param(sp, "period");
+  const period = periods.find((p) => p.key === periodKey) ?? periods[0];
+  const periodHref = (key: string) => hrefWith("/earnings", sp, { period: key === "month" ? undefined : key });
+  const ownerAll = profile.role === "owner" ? await getOwnerEarnings(profile.id) : null;
+  const ownerRows = (ownerAll ?? []).filter((r) => (!period.from || r.date >= period.from) && (!period.to || r.date <= period.to));
+  const ownerYears = [...new Set((ownerAll ?? []).map((r) => r.date.slice(0, 4)))].sort().map((y) => ({
+    year: y,
+    totals: totalsOf((ownerAll ?? []).filter((r) => r.date.startsWith(y))),
+    href: periodHref(y === thisYear ? "year" : y === nextYear ? "next" : y),
+  }));
+  const periodLabel = period.key === "month" || period.key === "last" ? formatMonth(period.from!) : period.key === "all" ? "vse" : period.from!.slice(0, 4);
   const s = summarize(all, today);
   const year = today.slice(0, 4);
   const paidThisYear = sumDecimals(all.filter((r) => r.status === "paid" && (r.paid_at ?? "").startsWith(year)).map((r) => r.amount));
 
   return (
     <>
-      {owner && (
+      {ownerAll && (
         <OwnerEarnings
-          rows={owner.rows}
-          totals={owner.totals}
+          rows={ownerRows}
+          totals={totalsOf(ownerRows)}
+          years={ownerYears}
+          thisYear={thisYear}
           names={names}
           activePeriod={period.key}
           periodLabel={periodLabel}
-          periodTabs={periods.map((p) => ({ key: p.key, label: p.label, href: hrefWith("/earnings", sp, { period: p.key === "month" ? undefined : p.key }) }))}
+          showSplit={period.key !== "all"}
+          periodTabs={periods.map((p) => ({ key: p.key, label: p.label, href: periodHref(p.key) }))}
         />
       )}
       <PageHeader

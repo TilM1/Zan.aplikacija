@@ -12,7 +12,9 @@ import { CustomerStatusBadge, ResultBadge } from "@/components/ui/status";
 import { buttonClasses } from "@/components/ui/button";
 import { FilterBar } from "@/components/pipeline/filter-bar";
 import { listCustomers } from "@/server/queries/customers";
-import { getPeople, nameOf } from "@/server/queries/people";
+import { getAgents, getCallers, getPeople, getVisibleCommissionRates, nameOf, toOptions } from "@/server/queries/people";
+import { getActiveProducts } from "@/server/queries/policies";
+import { SignedCustomerButton } from "@/components/customers/signed-customer";
 
 export const metadata: Metadata = { title: "Stranke" };
 const PAGE_SIZE = 50;
@@ -26,6 +28,15 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
     listCustomers({ q: param(sp, "q"), status: param(sp, "status"), archived, sort: param(sp, "sort"), page, pageSize: PAGE_SIZE }),
     getPeople(),
   ]);
+  const signed =
+    profile.role === "owner"
+      ? await Promise.all([getAgents(), getCallers(), getActiveProducts(), getVisibleCommissionRates()]).then(([agents, callers, products, rates]) => ({
+          agents: toOptions(agents),
+          callers: toOptions(callers),
+          products,
+          rates,
+        }))
+      : null;
 
   const sortProps = { sort, hrefFor: (s: string) => hrefWith("/customers", sp, { sort: s, page: undefined }) };
 
@@ -36,9 +47,12 @@ export default async function CustomersPage({ searchParams }: PageProps<"/custom
         description={profile.role === "owner" ? "Vse stranke v CRM" : "Stranke, s katerimi ste povezani"}
         actions={
           profile.role !== "agent" && (
-            <Link href="/appointments/new" className={buttonClasses("gold")}>
-              Nov termin
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              {signed && <SignedCustomerButton ownerId={profile.id} {...signed} />}
+              <Link href="/appointments/new" className={buttonClasses("gold")}>
+                Nov termin
+              </Link>
+            </div>
           )
         }
       />

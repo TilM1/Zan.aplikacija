@@ -31,7 +31,7 @@ export interface ResultTarget {
   callerName?: string;
 }
 
-interface PolicyDraft {
+export interface PolicyDraft {
   key: number;
   product_id: string;
   monthly_premium: string;
@@ -41,7 +41,7 @@ interface PolicyDraft {
   file: File | null;
 }
 
-const newPolicy = (key: number): PolicyDraft => ({
+export const newPolicy = (key: number): PolicyDraft => ({
   key,
   product_id: "",
   monthly_premium: "",
@@ -277,7 +277,7 @@ function ResultForm({
   );
 }
 
-function PolicyCard({
+export function PolicyCard({
   index,
   draft,
   products,

@@ -4,11 +4,11 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { notifyAppointmentAgent, notifyFollowupCaller } from "@/server/events";
 import { requireActor, isAgentLike } from "@/lib/auth";
-import { buildPoliciesPayload } from "@/lib/commission/payload";
 import { localDateTimeToIso } from "@/lib/dates";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { recordResultSchema } from "@/lib/validation";
+import { recordResultSchema, signedCustomerSchema } from "@/lib/validation";
+import { findDuplicates, type DuplicateMatch } from "@/server/duplicates";
+import { buildSalePolicies } from "@/server/sale-policies";
 import { callWorkflow, runAction, WorkflowError, type ActionResult } from "@/server/workflow";
 
 export interface RecordResultData {
@@ -40,51 +40,14 @@ export async function recordResult(input: unknown): Promise<ActionResult<RecordR
       .maybeSingle();
     if (!appt) throw new WorkflowError("Termin ne obstaja ali do njega nimate dostopa.");
 
-    let policies = null;
-    if (v.result === "A1") {
-      // Snapshot the CURRENT agent rate / per-product multipliers and caller multiplier (never retroactive).
-      const admin = createAdminClient();
-      const productIds = [...new Set(v.policies.map((p) => p.product_id))];
-      const [{ data: rate, error }, callerRes, productsRes, multRes] = await Promise.all([
-        admin.rpc("current_agent_rate", { p_agent_id: appt.agent_id }),
-        appt.caller_id ? admin.rpc("current_caller_multiplier", { p_caller_id: appt.caller_id }) : Promise.resolve({ data: null, error: null }),
-        admin.from("products").select("id, name, commission_model").in("id", productIds),
-        admin
-          .from("agent_product_multipliers")
-          .select("product_id, multiplier, effective_from, created_at")
-          .eq("agent_id", appt.agent_id)
-          .in("product_id", productIds)
-          .order("effective_from", { ascending: false })
-          .order("created_at", { ascending: false }),
-      ]);
-      if (error) throw error;
-      if (callerRes.error) throw callerRes.error;
-      const products = (productsRes.data ?? []) as { id: string; name: string; commission_model: "standard" | "agent_multiplier" }[];
-      const productModels = Object.fromEntries(products.map((p) => [p.id, p.commission_model]));
-      const agentMultipliers: Record<string, string> = {};
-      for (const m of multRes.data ?? []) if (!(m.product_id in agentMultipliers)) agentMultipliers[m.product_id] = String(Number(m.multiplier));
-      for (const p of products) {
-        if (p.commission_model === "agent_multiplier" && !agentMultipliers[p.id]) {
-          throw new WorkflowError(`Zastopnik nima nastavljene provizije za produkt »${p.name}«. Obrnite se na lastnika.`);
-        }
-      }
-      const needsRate = products.some((p) => p.commission_model === "standard");
-      if (needsRate && (rate === null || rate === undefined)) {
-        throw new WorkflowError("Zastopnik nima nastavljenega odstotka provizije. Obrnite se na lastnika.");
-      }
-      if (appt.caller_id && (callerRes.data === null || callerRes.data === undefined)) {
-        throw new WorkflowError("Klicatelj nima nastavljene provizije. Obrnite se na lastnika.");
-      }
-      policies = buildPoliciesPayload(
-        v.policies.map((p) => ({ ...p, policy_number: p.policy_number || null, note: p.note || null })),
-        {
-          agentRatePercent: rate === null || rate === undefined ? null : Number(rate).toFixed(2),
-          callerMultiplier: appt.caller_id ? String(Number(callerRes.data)) : null,
-          productModels,
-          agentMultipliers,
-        },
-      );
-    }
+    const policies =
+      v.result === "A1"
+        ? await buildSalePolicies(
+            appt.agent_id,
+            appt.caller_id,
+            v.policies.map((p) => ({ ...p, policy_number: p.policy_number || null, note: p.note || null })),
+          )
+        : null;
 
     const next =
       v.result === "A"
@@ -111,4 +74,49 @@ export async function recordResult(input: unknown): Promise<ActionResult<RecordR
     });
     return { ...res, customer_id: appt.customer_id };
   }, "Rezultat svetovanja je shranjen.");
+}
+
+export type SignedCustomerResult =
+  | { status: "created"; customer_id: string; policy_ids: string[] }
+  | { status: "duplicate"; matches: DuplicateMatch[] };
+
+/**
+ * Owner shortcut: add a customer who has already signed (customer + policies in
+ * one step, no appointment to enter). Same commission path as a normal sale.
+ */
+export async function addSignedCustomer(input: unknown): Promise<ActionResult<SignedCustomerResult>> {
+  return runAction(async () => {
+    const { userId } = await requireActor(["owner"]);
+    const v = signedCustomerSchema.parse(input);
+
+    if (!v.confirm_duplicate) {
+      const matches = await findDuplicates(v.phone, v.email);
+      if (matches.length > 0) return { status: "duplicate", matches } as const;
+    }
+
+    const callerId = v.caller_id || null;
+    const policies = await buildSalePolicies(
+      v.agent_id,
+      callerId,
+      v.policies.map((p) => ({ ...p, policy_number: p.policy_number || null, note: p.note || null })),
+    );
+    // Signed on the earliest policy date (noon, so the day never shifts with DST)
+    const signedOn = v.policies.map((p) => p.policy_date).sort()[0];
+    const res = await callWorkflow<{ customer_id: string; policy_ids: string[] }>("crm_add_signed_customer", {
+      p_actor: userId,
+      p_customer: {
+        first_name: v.first_name,
+        last_name: v.last_name,
+        phone: v.phone,
+        email: v.email,
+        address: v.address,
+        postal_code: v.postal_code,
+        city: v.city,
+      },
+      p_sale: { agent_id: v.agent_id, caller_id: callerId, signed_at: localDateTimeToIso(signedOn, "12:00"), note: v.note },
+      p_policies: policies,
+    });
+    revalidatePath("/", "layout");
+    return { status: "created", customer_id: res.customer_id, policy_ids: res.policy_ids } as const;
+  }, "Podpisana stranka je shranjena.");
 }

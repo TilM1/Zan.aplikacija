@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
 import { SlotFields, emptySlot, type SlotValue } from "./slot-fields";
 import { useSubmit } from "@/components/shared/use-submit";
-import { createCustomerWithAppointment, type CreateCustomerResult, type DuplicateMatch } from "@/server/actions/appointments";
+import { createCustomerWithAppointment, type CreateCustomerResult } from "@/server/actions/appointments";
+import type { DuplicateMatch } from "@/server/duplicates";
 import type { PersonOption } from "@/server/queries/people";
 
 const emptyCustomer = { first_name: "", last_name: "", phone: "", email: "", address: "", postal_code: "", city: "" };

@@ -72,6 +72,8 @@ products ──< policies
 
 Every step writes `activity_log` rows that form the customer timeline.
 
+**Owner shortcut – already signed customer** (Stranke → "Dodaj podpisano stranko", `crm_add_signed_customer`): creates the customer, a consultation dated on the signing day and result A1 with its policies in one transaction, so no appointment has to be typed in. It is the same chain as a normal sale; commissions use the selected Agent's and (optional) Caller's current settings, and payout dates follow from the policy date.
+
 ## Money and time
 
 - Money is `numeric(12,2)` in Postgres and **integer cents** in TypeScript (`src/lib/money.ts`), with no floating-point arithmetic. Rounding is half-up, matching Postgres `round()`.

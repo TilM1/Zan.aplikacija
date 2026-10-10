@@ -85,6 +85,27 @@ export const policyEntrySchema = z.object({
   note: z.string().trim().max(1000).optional().default(""),
 });
 
+/** Owner shortcut: customer who already signed. Only name, phone and policies are required. */
+export const signedCustomerSchema = z.object({
+  first_name: req("Ime"),
+  last_name: req("Priimek"),
+  phone: phoneSchema,
+  email: emailSchema.optional().default(""),
+  address: z.string().trim().max(300).optional().default(""),
+  postal_code: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || /^\d{4}$/.test(v), "Poštna številka ima 4 števke.")
+    .optional()
+    .default(""),
+  city: z.string().trim().max(120).optional().default(""),
+  agent_id: uuid("zastopnika"),
+  caller_id: z.string().uuid().optional().or(z.literal("")),
+  note: z.string().trim().max(2000).optional().default(""),
+  policies: z.array(policyEntrySchema).min(1, "Dodajte vsaj eno polico."),
+  confirm_duplicate: z.boolean().optional().default(false),
+});
+
 export const recordResultSchema = z.discriminatedUnion("result", [
   z.object({ result: z.literal("A"), appointment_id: z.string().uuid(), note: z.string().trim().max(2000).default(""), next: appointmentSlotSchema }),
   z.object({ result: z.literal("A0"), appointment_id: z.string().uuid(), note: z.string().trim().max(2000).default("") }),

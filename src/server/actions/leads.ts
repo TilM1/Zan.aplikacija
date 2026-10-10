@@ -28,6 +28,16 @@ const importRowSchema = z.object({
 /** Who sees a list and who gets a notification for new contacts (empty = every caller sees it). */
 const membersSchema = z.array(z.object({ caller_id: z.string().uuid(), notify: z.boolean() })).max(100);
 
+/**
+ * Address the Google Sheet script must call. Always the production domain:
+ * deployment-specific *.vercel.app addresses are behind Vercel's login and
+ * would reject the script (401). Null locally → the browser's address is used.
+ */
+const publicOrigin = () => {
+  const host = process.env.APP_PUBLIC_HOST || process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  return host ? `https://${host.replace(/^https?:\/\//, "").replace(/\/$/, "")}` : null;
+};
+
 const newToken = () => {
   const token = randomBytes(32).toString("hex");
   return { token, hash: createHash("sha256").update(token).digest("hex") };
@@ -37,7 +47,7 @@ const newToken = () => {
  * Live list fed by a Google Sheet. Returns the connection token ONCE (only
  * its hash is stored) – it is embedded in the Apps Script shown to the owner.
  */
-export async function createLiveList(input: unknown): Promise<ActionResult<{ list_id: string; token: string }>> {
+export async function createLiveList(input: unknown): Promise<ActionResult<{ list_id: string; token: string; origin: string | null }>> {
   return runAction(async () => {
     const { userId } = await requireActor(["owner"]);
     const v = z
@@ -59,18 +69,18 @@ export async function createLiveList(input: unknown): Promise<ActionResult<{ lis
     });
     revalidatePath("/export");
     revalidatePath("/leads");
-    return { list_id: id, token };
+    return { list_id: id, token, origin: publicOrigin() };
   }, "Live seznam je ustvarjen.");
 }
 
 /** New connection token (the old script stops working). */
-export async function rotateLiveListToken(input: unknown): Promise<ActionResult<{ token: string }>> {
+export async function rotateLiveListToken(input: unknown): Promise<ActionResult<{ token: string; origin: string | null }>> {
   return runAction(async () => {
     const { userId } = await requireActor(["owner"]);
     const v = z.object({ list_id: z.string().uuid() }).parse(input);
     const { token, hash } = newToken();
     await callWorkflow("crm_rotate_live_list_token", { p_actor: userId, p_list_id: v.list_id, p_token_hash: hash });
-    return { token };
+    return { token, origin: publicOrigin() };
   });
 }
 

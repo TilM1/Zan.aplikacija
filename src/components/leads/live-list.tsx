@@ -53,9 +53,9 @@ export function MembersPicker({ callers, value, onChange, showNotify = true }: {
   );
 }
 
-export function ScriptInstructions({ token, tab }: { token: string; tab: string }) {
+export function ScriptInstructions({ token, tab, origin }: { token: string; tab: string; origin: string | null }) {
   const [copied, setCopied] = useState(false);
-  const script = buildAppsScript({ origin: typeof window === "undefined" ? "" : window.location.origin, token, tab });
+  const script = buildAppsScript({ origin: origin ?? (typeof window === "undefined" ? "" : window.location.origin), token, tab });
   return (
     <div className="flex flex-col gap-3 text-sm">
       <ol className="list-decimal space-y-1.5 pl-5">
@@ -97,11 +97,11 @@ export function ScriptInstructions({ token, tab }: { token: string; tab: string 
 
 export function LiveListCard({ callers }: { callers: PersonOption[] }) {
   const router = useRouter();
-  const { submit, pending, error, fieldErrors } = useSubmit<{ list_id: string; token: string }>();
+  const { submit, pending, error, fieldErrors } = useSubmit<{ list_id: string; token: string; origin: string | null }>();
   const [open, setOpen] = useState(false);
   const [v, setV] = useState({ name: "Specialisti – oglasi", source_label: "Facebook oglas", source_tab: "SPECIALISTI" });
   const [members, setMembers] = useState<MemberDraft[]>([]);
-  const [created, setCreated] = useState<{ token: string; tab: string } | null>(null);
+  const [created, setCreated] = useState<{ token: string; tab: string; origin: string | null } | null>(null);
 
   return (
     <Card>
@@ -123,7 +123,7 @@ export function LiveListCard({ callers }: { callers: PersonOption[] }) {
       {created ? (
         <CardBody className="flex flex-col gap-3">
           <p className="rounded-lg bg-success-soft px-3 py-2 text-sm text-success">Live seznam je ustvarjen. Še zadnji korak – povežite Google tabelo:</p>
-          <ScriptInstructions token={created.token} tab={created.tab} />
+          <ScriptInstructions token={created.token} tab={created.tab} origin={created.origin} />
           <Button
             variant="secondary"
             className="self-start"
@@ -163,7 +163,7 @@ export function LiveListCard({ callers }: { callers: PersonOption[] }) {
               loading={pending}
               onClick={async () => {
                 const res = await submit(() => createLiveList({ ...v, members }));
-                if (res?.ok) setCreated({ token: res.data.token, tab: v.source_tab });
+                if (res?.ok) setCreated({ token: res.data.token, tab: v.source_tab, origin: res.data.origin });
               }}
             >
               Ustvari in pokaži navodila

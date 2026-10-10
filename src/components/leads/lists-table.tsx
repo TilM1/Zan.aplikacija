@@ -138,12 +138,12 @@ export function ListsTable({
 }
 
 function RelinkDialog({ list, onClose }: { list: LeadList; onClose: () => void }) {
-  const { submit, pending, error } = useSubmit<{ token: string }>();
-  const [token, setToken] = useState<string | null>(null);
+  const { submit, pending, error } = useSubmit<{ token: string; origin: string | null }>();
+  const [token, setToken] = useState<{ token: string; origin: string | null } | null>(null);
   return (
     <Dialog open onClose={onClose} title="Povezava z Google tabelo" description={list.name} size="lg">
       {token ? (
-        <ScriptInstructions token={token} tab={list.source_tab ?? "SPECIALISTI"} />
+        <ScriptInstructions token={token.token} origin={token.origin} tab={list.source_tab ?? "SPECIALISTI"} />
       ) : (
         <div className="flex flex-col gap-3 text-sm">
           <FormError message={error} />
@@ -156,7 +156,7 @@ function RelinkDialog({ list, onClose }: { list: LeadList; onClose: () => void }
             loading={pending}
             onClick={async () => {
               const res = await submit(() => rotateLiveListToken({ list_id: list.id }));
-              if (res?.ok) setToken(res.data.token);
+              if (res?.ok) setToken(res.data);
             }}
           >
             Ustvari novo kodo

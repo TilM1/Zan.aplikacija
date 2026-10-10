@@ -43,6 +43,18 @@ export function LeadsTable({
   };
 
   const live = new Set(liveListIds);
+  const short = (q: string) => {
+    const t = q.replace(/\?$/, "");
+    return t.length > 34 ? `${t.slice(0, 32).trimEnd()}…` : t;
+  };
+  const anyLive = rows.some((r) => live.has(r.list_id));
+  // What the person ticked in the ad form: the columns that are questions.
+  const answers = (l: Lead) => {
+    if (!live.has(l.list_id)) return [];
+    const all = Object.entries(l.extra ?? {});
+    const questions = all.filter(([k]) => k.trim().endsWith("?"));
+    return (questions.length ? questions : all).slice(0, 6);
+  };
   if (rows.length === 0) return <EmptyState icon={Phone} title="Ni kontaktov" description="Za izbrane filtre ni kontaktov. Poskusite spremeniti filter ali zavihek." />;
 
   return (
@@ -54,6 +66,7 @@ export function LeadsTable({
             {th("Naziv", "name")}
             {th("Oddano", "source_created_at", undefined, true)}
             <TH>Telefon</TH>
+            {anyLive && <TH>Odgovori iz oglasa</TH>}
             {th("Kraj", "city")}
             {th("Pošta", "postal_code")}
             {th("Dejavnost", "activity")}
@@ -89,6 +102,17 @@ export function LeadsTable({
                     {formatPhone(l.phone_normalized)}
                   </a>
                 </TD>
+                {anyLive && (
+                  <TD className="min-w-64 max-w-96">
+                    <ul className="space-y-0.5 text-xs leading-snug">
+                      {answers(l).map(([q, a]) => (
+                        <li key={q} title={q}>
+                          <span className="text-ink-3">{short(q)}:</span> <span className="font-medium">{a}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </TD>
+                )}
                 <TD className="whitespace-nowrap">{l.city}</TD>
                 <TD className="tabular">{l.postal_code}</TD>
                 <TD className="max-w-56 truncate text-ink-2">{l.activity}</TD>

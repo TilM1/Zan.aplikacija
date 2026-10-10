@@ -23,7 +23,7 @@ export interface LeadFilters {
 }
 
 export const LEAD_LIST_COLUMNS =
-  "id, list_id, row_number, name, phone, phone_normalized, street, postal_code, city, activity, tax_number, email, status, next_call_at, last_contacted_at, last_contacted_by, contact_count, last_comment, customer_id, existing_customer_id, source_created_at, reinquiry_at, reinquiry_note, no_answer_count, created_at";
+  "id, list_id, row_number, name, phone, phone_normalized, street, postal_code, city, activity, tax_number, email, status, next_call_at, last_contacted_at, last_contacted_by, contact_count, last_comment, customer_id, existing_customer_id, source_created_at, reinquiry_at, reinquiry_note, no_answer_count, extra, created_at";
 
 export async function listLeads(f: LeadFilters) {
   const supabase = await createClient();

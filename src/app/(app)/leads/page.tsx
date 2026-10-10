@@ -9,6 +9,8 @@ import { EmptyState, PageHeader, Pagination, Tabs } from "@/components/ui/misc";
 import { buttonClasses } from "@/components/ui/button";
 import { FilterBar, type FilterDef } from "@/components/pipeline/filter-bar";
 import { LeadsTable } from "@/components/leads/leads-table";
+import { AutoRefresh } from "@/components/leads/auto-refresh";
+import { cn } from "@/lib/utils";
 import { getCityFacets, getLeadListStats, getLeadLists, getRecallMonths, LEAD_SORTS, listLeads, type LeadView } from "@/server/queries/leads";
 import { getPeople } from "@/server/queries/people";
 
@@ -19,6 +21,7 @@ const VIEWS: { key: LeadView; label: string }[] = [
   { key: "scheduled", label: "Načrtovani ponovni klici" },
   { key: "appointment", label: "Termini" },
   { key: "rejected", label: "Zavrnjeni" },
+  { key: "invalid", label: "Neveljavne" },
   { key: "do_not_call", label: "Ne kliči" },
   { key: "all", label: "Vsi" },
 ];
@@ -29,9 +32,13 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
   const view = (VIEWS.find((v) => v.key === param(sp, "view"))?.key ?? "due") as LeadView;
   const listId = isUuid(param(sp, "list")) ? param(sp, "list") : undefined;
   const page = pageParam(sp);
+  const kind = param(sp, "kind") === "live" ? "live" : param(sp, "kind") === "import" ? "import" : "all";
 
-  const [lists, stats, cities, people, recallMonths, result] = await Promise.all([
-    getLeadLists({ includeInactive: false }),
+  const lists = await getLeadLists({ includeInactive: false });
+  const liveListIds = lists.filter((l) => l.kind === "live").map((l) => l.id);
+  const kindListIds = kind === "all" ? undefined : lists.filter((l) => l.kind === kind).map((l) => l.id);
+
+  const [stats, cities, people, recallMonths, result] = await Promise.all([
     getLeadListStats(),
     getCityFacets(listId),
     getPeople(),
@@ -39,6 +46,7 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
     listLeads({
       view,
       list: listId,
+      listIds: kindListIds,
       q: param(sp, "q"),
       city: param(sp, "city"),
       postal: param(sp, "postal"),
@@ -66,16 +74,17 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
   }
 
   // Tab counts (for the selected list or all visible lists)
-  const relevant = Object.entries(stats).filter(([id]) => (listId ? id === listId : lists.some((l) => l.id === id)));
+  const relevant = Object.entries(stats).filter(([id]) => (listId ? id === listId : kindListIds ? kindListIds.includes(id) : lists.some((l) => l.id === id)));
   const sum = (fn: (s: (typeof stats)[string]) => number) => relevant.reduce((a, [, s]) => a + fn(s), 0);
   const counts: Record<string, number> = {
     due: sum((s) => s.due),
     appointment: sum((s) => s.byStatus.appointment ?? 0),
     rejected: sum((s) => s.byStatus.rejected ?? 0),
     do_not_call: sum((s) => s.byStatus.do_not_call ?? 0),
+    invalid: sum((s) => s.byStatus.invalid ?? 0),
     all: sum((s) => s.total),
   };
-  counts.scheduled = sum((s) => (s.byStatus.callback ?? 0) + (s.byStatus.rejected ?? 0)) - (sum((s) => s.due) - sum((s) => s.byStatus.new ?? 0));
+  counts.scheduled = sum((s) => (s.byStatus.callback ?? 0) + (s.byStatus.rejected ?? 0) + (s.byStatus.no_answer ?? 0)) - (sum((s) => s.due) - sum((s) => s.byStatus.new ?? 0));
 
   const names = Object.fromEntries([...people.values()].map((p) => [p.id, `${p.first_name} ${p.last_name}`]));
   const listNames = Object.fromEntries(lists.map((l) => [l.id, l.name]));
@@ -83,7 +92,7 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
   const filters: FilterDef[] = [
     { key: "q", label: "Iskanje", type: "search", placeholder: "Naziv, telefon, e-pošta, davčna…" },
     ...(lists.length > 1
-      ? [{ key: "list", label: "Seznam (mapa)", type: "select", options: [{ value: "", label: "Vsi seznami" }, ...lists.map((l) => ({ value: l.id, label: l.name }))] } as FilterDef]
+      ? [{ key: "list", label: "Seznam (mapa)", type: "select", options: [{ value: "", label: "Vsi seznami" }, ...lists.filter((l) => kind === "all" || l.kind === kind).map((l) => ({ value: l.id, label: `${l.kind === "live" ? "LIVE · " : ""}${l.name}` }))] } as FilterDef]
       : []),
     { key: "city", label: "Kraj", type: "select", options: [{ value: "", label: "Vsi kraji" }, ...cities.map((c) => ({ value: c.city, label: `${c.city} (${c.n})` }))] },
     { key: "postal", label: "Poštna št.", type: "search", placeholder: "npr. 1000", className: "min-w-28 max-w-32 flex-none" },
@@ -96,6 +105,33 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
         title="Klicni seznam"
         description="Kliknite na kontakt, pokličite in izberite, kako se je klic končal. Zavihek »Za klic« vsebuje nove kontakte in tiste, ki jih je treba danes poklicati ponovno."
       />
+      <AutoRefresh seconds={30} />
+      {liveListIds.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold">Kaj kličem:</span>
+          {([
+            ["all", "Vse"],
+            ["live", "Live (oglasi)"],
+            ["import", "Uvoženi seznami"],
+          ] as const).map(([k, label]) => (
+            <Link
+              key={k}
+              href={hrefWith("/leads", sp, { kind: k === "all" ? undefined : k, list: undefined, page: undefined })}
+              className={cn(
+                "inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-sm font-medium",
+                kind === k ? "border-ink bg-ink text-white" : "border-line-strong bg-surface hover:border-gold",
+              )}
+            >
+              {label}
+              {k === "live" && (
+                <span className={cn("rounded-full px-2 text-xs font-bold tabular", kind === k ? "bg-gold text-ink" : "bg-gold text-ink")}>
+                  {liveListIds.reduce((a, id) => a + (stats[id]?.due ?? 0), 0)}
+                </span>
+              )}
+            </Link>
+          ))}
+        </div>
+      )}
       <Tabs
         active={view}
         tabs={VIEWS.map((v) => ({ key: v.key, label: v.label, count: counts[v.key], href: hrefWith("/leads", sp, { view: v.key === "due" ? undefined : v.key, page: undefined, sort: undefined }) }))}
@@ -106,6 +142,7 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
           rows={result.rows}
           names={names}
           listNames={listNames}
+          liveListIds={liveListIds}
           showList={lists.length > 1 && !listId}
           sort={result.sort}
           sortHrefs={buildSortHrefs("/leads", sp, LEAD_SORTS)}

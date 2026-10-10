@@ -9,7 +9,8 @@ import { FilterBar } from "@/components/pipeline/filter-bar";
 import { EXPORT_DATASETS } from "@/server/export/datasets";
 import { ImportCard } from "@/components/leads/import-card";
 import { ListsTable } from "@/components/leads/lists-table";
-import { getLeadListStats, getLeadLists } from "@/server/queries/leads";
+import { LiveListCard } from "@/components/leads/live-list";
+import { getLeadListMembers, getLeadListStats, getLeadLists } from "@/server/queries/leads";
 import { getCallers, getPeople, toOptions } from "@/server/queries/people";
 
 export const metadata: Metadata = { title: "Uvoz / izvoz" };
@@ -17,7 +18,7 @@ export const metadata: Metadata = { title: "Uvoz / izvoz" };
 export default async function ExportPage({ searchParams }: PageProps<"/export">) {
   await requireSession(["owner"]);
   const sp = await searchParams;
-  const [lists, stats, callers, people] = await Promise.all([getLeadLists({ includeInactive: true }), getLeadListStats(), getCallers(), getPeople()]);
+  const [lists, stats, callers, people, members] = await Promise.all([getLeadLists({ includeInactive: true }), getLeadListStats(), getCallers(), getPeople(), getLeadListMembers()]);
   const names = Object.fromEntries([...people.values()].map((p) => [p.id, `${p.first_name} ${p.last_name}`]));
   const qs = new URLSearchParams();
   if (param(sp, "from")) qs.set("from", param(sp, "from")!);
@@ -29,7 +30,8 @@ export default async function ExportPage({ searchParams }: PageProps<"/export">)
       <PageHeader title="Uvoz / izvoz" description="Uvoz kontaktov za klicanje in izvoz podatkov CRM (samo lastnik)." />
       <div className="mb-8 flex flex-col gap-4">
         <ImportCard callers={toOptions(callers)} />
-        <ListsTable lists={lists} stats={stats} callers={toOptions(callers)} names={names} />
+        <LiveListCard callers={toOptions(callers)} />
+        <ListsTable lists={lists} stats={stats} callers={toOptions(callers)} names={names} members={members} />
       </div>
       <h2 className="mb-3 text-lg font-semibold">Izvoz podatkov</h2>
       <div className="mb-4 flex gap-3 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-ink-2">

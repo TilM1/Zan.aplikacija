@@ -1,5 +1,6 @@
 "use server";
 
+import { createHash, randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireActor } from "@/lib/auth";
@@ -23,6 +24,55 @@ const importRowSchema = z.object({
   email: s(200),
   extra: z.record(z.string().max(80), z.string().max(500)).refine((o) => Object.keys(o).length <= 60, "Preveč stolpcev."),
 });
+
+/** Who sees a list and who gets a notification for new contacts (empty = every caller sees it). */
+const membersSchema = z.array(z.object({ caller_id: z.string().uuid(), notify: z.boolean() })).max(100);
+
+const newToken = () => {
+  const token = randomBytes(32).toString("hex");
+  return { token, hash: createHash("sha256").update(token).digest("hex") };
+};
+
+/**
+ * Live list fed by a Google Sheet. Returns the connection token ONCE (only
+ * its hash is stored) – it is embedded in the Apps Script shown to the owner.
+ */
+export async function createLiveList(input: unknown): Promise<ActionResult<{ list_id: string; token: string }>> {
+  return runAction(async () => {
+    const { userId } = await requireActor(["owner"]);
+    const v = z
+      .object({
+        name: z.string().trim().min(1, "Vnesite ime seznama.").max(120),
+        source_label: z.string().trim().max(120).optional().default(""),
+        source_tab: z.string().trim().min(1, "Vnesite ime zavihka v tabeli.").max(100),
+        members: membersSchema,
+      })
+      .parse(input);
+    const { token, hash } = newToken();
+    const id = await callWorkflow<string>("crm_create_live_list", {
+      p_actor: userId,
+      p_name: v.name,
+      p_source_label: v.source_label,
+      p_source_tab: v.source_tab,
+      p_token_hash: hash,
+      p_members: v.members,
+    });
+    revalidatePath("/export");
+    revalidatePath("/leads");
+    return { list_id: id, token };
+  }, "Live seznam je ustvarjen.");
+}
+
+/** New connection token (the old script stops working). */
+export async function rotateLiveListToken(input: unknown): Promise<ActionResult<{ token: string }>> {
+  return runAction(async () => {
+    const { userId } = await requireActor(["owner"]);
+    const v = z.object({ list_id: z.string().uuid() }).parse(input);
+    const { token, hash } = newToken();
+    await callWorkflow("crm_rotate_live_list_token", { p_actor: userId, p_list_id: v.list_id, p_token_hash: hash });
+    return { token };
+  });
+}
 
 // ---------------------------------------------------------------- Owner: import
 export async function createLeadList(input: unknown): Promise<ActionResult<{ list_id: string }>> {
@@ -81,14 +131,14 @@ export async function updateLeadList(input: unknown): Promise<ActionResult> {
   return runAction(async () => {
     const { userId } = await requireActor(["owner"]);
     const v = z
-      .object({ list_id: z.string().uuid(), name: z.string().trim().min(1).max(120), assigned_caller_id: z.string().uuid().nullable(), archived: z.boolean() })
+      .object({ list_id: z.string().uuid(), name: z.string().trim().min(1).max(120), archived: z.boolean(), members: membersSchema })
       .parse(input);
     await callWorkflow("crm_update_lead_list", {
       p_actor: userId,
       p_list_id: v.list_id,
       p_name: v.name,
-      p_assigned_caller_id: v.assigned_caller_id,
       p_archived: v.archived,
+      p_members: v.members,
     });
     revalidatePath("/export");
     revalidatePath("/leads");
@@ -124,7 +174,7 @@ export async function setLeadStatus(input: unknown): Promise<ActionResult<{ next
     const v = z
       .object({
         lead_id: z.string().uuid(),
-        status: z.enum(["callback", "rejected", "do_not_call", "new"]),
+        status: z.enum(["callback", "rejected", "do_not_call", "no_answer", "invalid", "new"]),
         date: dateSchema.optional(),
         time: timeSchema.optional(),
         comment: z.string().trim().max(2000).optional().default(""),

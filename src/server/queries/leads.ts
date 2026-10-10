@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { parseSort } from "@/lib/url";
 import type { Lead, LeadEvent, LeadList, LeadStatus } from "@/types/domain";
 
-export const LEAD_SORTS = ["row_number", "name", "city", "postal_code", "activity", "status", "next_call_at", "last_contacted_at", "contact_count"] as const;
+export const LEAD_SORTS = ["source_created_at", "row_number", "name", "city", "postal_code", "activity", "status", "next_call_at", "last_contacted_at", "contact_count"] as const;
 
 /** "due" = to call now: new, or callback/rejected whose recall date has arrived. */
 export type LeadView = "due" | "all" | LeadStatus | "scheduled";
@@ -11,6 +11,8 @@ export type LeadView = "due" | "all" | LeadStatus | "scheduled";
 export interface LeadFilters {
   view: LeadView;
   list?: string;
+  /** Restrict to these lists (e.g. all live lists). */
+  listIds?: string[];
   q?: string;
   city?: string;
   postal?: string;
@@ -21,7 +23,7 @@ export interface LeadFilters {
 }
 
 export const LEAD_LIST_COLUMNS =
-  "id, list_id, row_number, name, phone, phone_normalized, street, postal_code, city, activity, tax_number, email, status, next_call_at, last_contacted_at, last_contacted_by, contact_count, last_comment, customer_id, existing_customer_id, created_at";
+  "id, list_id, row_number, name, phone, phone_normalized, street, postal_code, city, activity, tax_number, email, status, next_call_at, last_contacted_at, last_contacted_by, contact_count, last_comment, customer_id, existing_customer_id, source_created_at, reinquiry_at, reinquiry_note, no_answer_count, created_at";
 
 export async function listLeads(f: LeadFilters) {
   const supabase = await createClient();
@@ -29,10 +31,10 @@ export async function listLeads(f: LeadFilters) {
   const nowIso = new Date().toISOString();
   switch (f.view) {
     case "due":
-      q = q.or(`status.eq.new,and(status.in.(callback,rejected),next_call_at.lte.${nowIso})`);
+      q = q.or(`status.eq.new,and(status.in.(callback,rejected,no_answer),next_call_at.lte.${nowIso})`);
       break;
-    case "scheduled": // callbacks/rejections waiting for a later date
-      q = q.in("status", ["callback", "rejected"]).gt("next_call_at", nowIso);
+    case "scheduled": // callbacks / no-answer retries / rejections waiting for a later date
+      q = q.in("status", ["callback", "rejected", "no_answer"]).gt("next_call_at", nowIso);
       break;
     case "all":
       break;
@@ -40,6 +42,7 @@ export async function listLeads(f: LeadFilters) {
       q = q.eq("status", f.view);
   }
   if (f.list) q = q.eq("list_id", f.list);
+  else if (f.listIds) q = q.in("list_id", f.listIds.length ? f.listIds : ["00000000-0000-0000-0000-000000000000"]);
   if (f.city) q = q.ilike("city", f.city.replace(/[%_]/g, ""));
   if (f.postal) q = q.eq("postal_code", f.postal.trim());
   if (f.activity) q = q.ilike("activity", `%${f.activity.replace(/[%_,()]/g, "")}%`);
@@ -50,7 +53,8 @@ export async function listLeads(f: LeadFilters) {
       ? q.ilike("phone_normalized", `%${digits.replace(/^(\+386|00386|0)/, "")}%`)
       : q.ilike("search_text", `%${term}%`);
   }
-  const s = parseSort(f.sort, LEAD_SORTS, f.view === "due" ? "row_number" : "-last_contacted_at");
+  // Default for "to call": freshest inquiries first (live leads), then imported lists in file order
+  const s = parseSort(f.sort, LEAD_SORTS, f.view === "due" ? "-source_created_at" : "-last_contacted_at");
   q = q.order(s.column, { ascending: s.ascending, nullsFirst: false }).order("row_number").range((f.page - 1) * f.pageSize, f.page * f.pageSize - 1);
   const { data, count, error } = await q;
   if (error) throw error;
@@ -112,6 +116,18 @@ export async function countDueLeads(): Promise<number> {
   const { count } = await supabase
     .from("leads")
     .select("id", { count: "exact", head: true })
-    .or(`status.eq.new,and(status.in.(callback,rejected),next_call_at.lte.${new Date().toISOString()})`);
+    .or(`status.eq.new,and(status.in.(callback,rejected,no_answer),next_call_at.lte.${new Date().toISOString()})`);
   return count ?? 0;
+}
+
+export interface ListMember {
+  list_id: string;
+  caller_id: string;
+  notify: boolean;
+}
+
+export async function getLeadListMembers(): Promise<ListMember[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("lead_list_members").select("list_id, caller_id, notify");
+  return (data ?? []) as ListMember[];
 }

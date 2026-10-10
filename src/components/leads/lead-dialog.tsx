@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Ban, CalendarCheck, ChevronLeft, ChevronRight, Clock, Phone, ThumbsDown } from "lucide-react";
+import { Ban, CalendarCheck, ChevronLeft, ChevronRight, Clock, Flame, Phone, PhoneMissed, PhoneOff, ThumbsDown } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,7 @@ import type { Lead, LeadEvent } from "@/types/domain";
 import { cn } from "@/lib/utils";
 
 type Detail = { lead: Lead & { list: { name: string } | null }; events: LeadEvent[] };
-type Mode = null | "callback" | "rejected" | "do_not_call";
+type Mode = null | "callback" | "rejected" | "do_not_call" | "invalid";
 
 const QUICK_DAYS = [
   { label: "Jutri", days: 1 },
@@ -121,14 +121,24 @@ function LeadBody({ id, names, recallMonths, onSaved }: { id: string; names: Rec
     }
   };
 
-  async function saveStatus(status: "callback" | "rejected" | "do_not_call") {
+  async function saveStatus(status: "callback" | "rejected" | "do_not_call" | "no_answer" | "invalid") {
     if (busy) return;
     setBusy(true);
     setError(null);
     const res = await setLeadStatus({ lead_id: id, status, date: status === "callback" ? date : undefined, time, comment });
     setBusy(false);
     if (!res.ok) return setError(res.error);
-    done(status === "callback" ? `Ponovni klic: ${formatDate(date)} ob ${time}` : status === "rejected" ? `Zavrnjen – ponovno čez ${recallMonths} mes.` : "Označeno: ne želi klicev");
+    done(
+      status === "callback"
+        ? `Ponovni klic: ${formatDate(date)} ob ${time}`
+        : status === "rejected"
+          ? `Zavrnjen – ponovno čez ${recallMonths} mes.`
+          : status === "no_answer"
+            ? "Se ne javi – vrne se jutri"
+            : status === "invalid"
+              ? "Označeno: neveljavna številka"
+              : "Označeno: ne želi klicev",
+    );
   }
 
   async function saveComment() {
@@ -160,6 +170,20 @@ function LeadBody({ id, names, recallMonths, onSaved }: { id: string; names: Rec
           <span>· Seznam: {lead.list?.name}</span>
         </p>
       </div>
+      {lead.reinquiry_note && lead.status !== "appointment" && (
+        <div className="flex items-start gap-3 rounded-xl border-2 border-gold bg-gold-soft px-4 py-3">
+          <Flame className="mt-0.5 size-5 shrink-0 text-brand" />
+          <div className="text-sm">
+            <p className="font-semibold">Pozor: ta oseba se je dodatno zanimala{lead.reinquiry_at ? ` (${formatDateTime(lead.reinquiry_at)})` : ""}</p>
+            <p className="mt-0.5 text-ink-2">{lead.reinquiry_note}</p>
+          </div>
+        </div>
+      )}
+      {lead.source_created_at && (
+        <p className="-mb-2 text-sm text-ink-2">
+          Povpraševanje oddano: <b>{formatDateTime(lead.source_created_at)}</b>
+        </p>
+      )}
       <a
         href={`tel:${lead.phone_normalized}`}
         className="flex items-center justify-center gap-3 rounded-xl bg-ink px-4 py-3.5 text-lg font-semibold text-white tabular hover:bg-black"
@@ -173,11 +197,22 @@ function LeadBody({ id, names, recallMonths, onSaved }: { id: string; names: Rec
         <Info label="Davčna številka" value={lead.tax_number} />
         <Info label="E-pošta" value={lead.email} />
         <Info label="Klicano" value={lead.contact_count ? `${lead.contact_count}× · zadnjič ${formatDateTime(lead.last_contacted_at)} (${names[lead.last_contacted_by ?? ""] ?? "–"})` : "Še ne"} />
-        {lead.existing_customer_id && <Info label="Opozorilo" value={<Badge tone="warning">Že obstaja kot stranka v CRM</Badge>} />}
+        {lead.existing_customer_id && (
+          <Info
+            label="Opozorilo"
+            value={
+              <a href={`/customers/${lead.existing_customer_id}`} className="font-medium text-warning underline">
+                Že obstaja kot stranka v CRM – odpri stranko
+              </a>
+            }
+          />
+        )}
       </dl>
       {Object.keys(lead.extra ?? {}).length > 0 && (
-        <details className="rounded-lg border border-line px-3 py-2 text-sm">
-          <summary className="cursor-pointer font-medium text-ink-2">Ostali podatki iz datoteke ({Object.keys(lead.extra).length})</summary>
+        <details className="rounded-lg border border-line px-3 py-2 text-sm" open={!!lead.source_created_at}>
+          <summary className="cursor-pointer font-medium text-ink-2">
+            {lead.source_created_at ? "Odgovori iz obrazca in ostali podatki" : "Ostali podatki iz datoteke"} ({Object.keys(lead.extra).length})
+          </summary>
           <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
             {Object.entries(lead.extra).map(([k, v]) => (
               <Info key={k} label={k} value={v} />
@@ -201,12 +236,19 @@ function LeadBody({ id, names, recallMonths, onSaved }: { id: string; names: Rec
         <>
           <div>
             <p className="mb-2 text-sm font-semibold">Kako se je končal klic?</p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               <StatusButton icon={CalendarCheck} label="Termin dogovorjen" tone="gold" onClick={() => router.push(`/appointments/new?lead=${lead.id}`)} />
+              <StatusButton
+                icon={PhoneMissed}
+                label={lead.no_answer_count ? `Se ne javi (${lead.no_answer_count + 1}. poskus)` : "Se ne javi"}
+                onClick={() => saveStatus("no_answer")}
+              />
               <StatusButton icon={Clock} label="Ponovni klic" active={mode === "callback"} onClick={() => setMode("callback")} />
               <StatusButton icon={ThumbsDown} label="Zavrnjen" active={mode === "rejected"} onClick={() => setMode("rejected")} />
+              <StatusButton icon={PhoneOff} label="Neveljavna številka" active={mode === "invalid"} onClick={() => setMode("invalid")} />
               <StatusButton icon={Ban} label="Ne želi klicev" tone="danger" active={mode === "do_not_call"} onClick={() => setMode("do_not_call")} />
             </div>
+            <p className="mt-1.5 text-xs text-ink-3">»Se ne javi« se shrani takoj – kontakt se vrne v seznam jutri ob 8:00.</p>
           </div>
 
           {mode === "callback" && (
@@ -242,6 +284,9 @@ function LeadBody({ id, names, recallMonths, onSaved }: { id: string; names: Rec
               Kontakt se bo v seznamu »Za klic« ponovno pojavil čez <b>{recallMonths} mesecev</b> (nastavi lastnik).
             </p>
           )}
+          {mode === "invalid" && (
+            <p className="rounded-lg bg-subtle px-3 py-2 text-sm text-ink-2">Številka ne obstaja ali ni prava oseba. Kontakt gre iz seznama za klic (lastnik ga še vidi pod »Neveljavne«).</p>
+          )}
           {mode === "do_not_call" && (
             <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
               Oseba ne želi več klicev. Številka se trajno doda na seznam »Ne kliči« in je ne bomo več klicali – tudi če pride v novi datoteki.
@@ -267,7 +312,7 @@ function LeadBody({ id, names, recallMonths, onSaved }: { id: string; names: Rec
         )}
         {mode && (
           <Button variant={mode === "do_not_call" ? "danger" : "gold"} loading={busy} onClick={() => saveStatus(mode)}>
-            {mode === "callback" ? `Shrani ponovni klic (${formatDate(date)})` : mode === "rejected" ? "Shrani: zavrnjen" : "Potrdi: ne želi klicev"}
+            {mode === "callback" ? `Shrani ponovni klic (${formatDate(date)})` : mode === "rejected" ? "Shrani: zavrnjen" : mode === "invalid" ? "Shrani: neveljavna številka" : "Potrdi: ne želi klicev"}
           </Button>
         )}
       </div>
@@ -284,6 +329,10 @@ function LeadBody({ id, names, recallMonths, onSaved }: { id: string; names: Rec
                 <p>
                   {e.action === "comment" ? (
                     "💬 "
+                  ) : e.action === "reinquiry" ? (
+                    <Badge tone="accent" className="mr-1.5">
+                      Novo povpraševanje
+                    </Badge>
                   ) : (
                     <Badge tone={LEAD_STATUS_LABELS[e.status_to ?? "new"].tone} className="mr-1.5">
                       {LEAD_STATUS_LABELS[e.status_to ?? "new"].label}

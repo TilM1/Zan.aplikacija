@@ -106,6 +106,16 @@ Import runs in the browser: the file is parsed there (`read-excel-file` / `papap
 
 "Za klic" (due) = `status = new` OR (`callback`/`rejected` AND `next_call_at <= now()`). Rejected leads get `next_call_at = now() + recall months`. Converting a lead calls `crm_create_customer_with_appointment(..., p_lead_id)` in the same transaction.
 
+### Live lists (Google Sheets)
+
+A `lead_lists` row with `kind = 'live'` is fed by a Google Apps Script bound to the Owner's sheet (generated in Uvoz/izvoz → "Live seznam iz Google Sheets", `src/lib/leads/apps-script.ts`). Every minute the script POSTs the header row and rows to `POST /api/leads/ingest` with a per-list Bearer token (only its SHA-256 is stored in `lead_lists.ingest_token_hash`; "Nova povezava" rotates it). Nothing is written back to the sheet.
+
+- `src/lib/leads/sheet-ingest.ts` maps the sheet columns; rows with sheet status `SALES IN PROCESS` or `INVALID` are skipped, everything else arrives as a fresh `new` lead with `source_created_at` (when the form was submitted).
+- `crm_ingest_live_leads` is idempotent (`lead_ingest_log` remembers each row's key). A phone number that already exists in another list is **moved** into the live list as a re-inquiry: status back to `new`, both data sets merged, `reinquiry_at`/`reinquiry_note` set (shown as "DVOJNIK · DODATNO SE ZANIMA").
+- `lead_list_members (list_id, caller_id, notify)`: which Callers see a list; `notify = true` gets a push for every new contact. A list without members is visible to all Callers.
+- Extra statuses: `no_answer` ("Se ne javi": due again next day 08:00, counted in `no_answer_count`) and `invalid` ("Neveljavna številka").
+- The call list page refreshes itself every 30 s.
+
 Phone numbers are normalised identically in SQL (`crm_normalize_phone`, also used for `customers.phone_normalized`) and TypeScript (`src/lib/phone.ts`).
 
 ## Skadence (customer expiries)

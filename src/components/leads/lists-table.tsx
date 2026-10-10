@@ -2,25 +2,40 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Pencil, Trash2 } from "lucide-react";
+import { Bell, Download, Link2, Pencil, Trash2 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog, Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/misc";
-import { Field, FormError, Input, Select } from "@/components/ui/form";
+import { Field, FormError, Input } from "@/components/ui/form";
 import { Table, TD, TH, THead, TR } from "@/components/ui/table";
 import { useSubmit } from "@/components/shared/use-submit";
-import { deleteLeadList, updateLeadList } from "@/server/actions/leads";
-import { formatDate } from "@/lib/dates";
+import { deleteLeadList, rotateLiveListToken, updateLeadList } from "@/server/actions/leads";
+import { MembersPicker, ScriptInstructions, type MemberDraft } from "./live-list";
+import { formatDate, formatDateTime } from "@/lib/dates";
 import type { LeadList } from "@/types/domain";
-import type { ListStats } from "@/server/queries/leads";
+import type { ListMember, ListStats } from "@/server/queries/leads";
 import type { PersonOption } from "@/server/queries/people";
 
 const n = (x: number | undefined) => (x ?? 0).toLocaleString("sl-SI");
 
-export function ListsTable({ lists, stats, callers, names }: { lists: LeadList[]; stats: Record<string, ListStats>; callers: PersonOption[]; names: Record<string, string> }) {
+export function ListsTable({
+  lists,
+  stats,
+  callers,
+  names,
+  members,
+}: {
+  lists: LeadList[];
+  stats: Record<string, ListStats>;
+  callers: PersonOption[];
+  names: Record<string, string>;
+  members: ListMember[];
+}) {
   const [editing, setEditing] = useState<LeadList | null>(null);
+  const [linking, setLinking] = useState<LeadList | null>(null);
+  const membersOf = (id: string) => members.filter((m) => m.list_id === id);
   const [deleting, setDeleting] = useState<LeadList | null>(null);
   return (
     <Card>
@@ -53,17 +68,37 @@ export function ListsTable({ lists, stats, callers, names }: { lists: LeadList[]
                     <a href={`/leads?list=${l.id}&view=all`} className="font-semibold hover:text-brand hover:underline">
                       {l.name}
                     </a>
-                    <span className="block text-[11px] text-ink-3">{l.source_file_name}</span>
+                    {l.kind === "live" && <span className="ml-1.5 rounded bg-ink px-1.5 text-[10px] font-bold tracking-wide text-gold">LIVE</span>}
+                    <span className="block text-[11px] text-ink-3">{l.kind === "live" ? `${l.source_label ?? "Google Sheets"} · zavihek ${l.source_tab ?? "–"}` : l.source_file_name}</span>
                   </TD>
                   <TD className="text-xs whitespace-nowrap text-ink-2">
-                    {formatDate(l.created_at)}
+                    {l.kind === "live" ? (
+                      l.last_ingest_at ? (
+                        <span className="text-success">Povezano · zadnji prenos {formatDateTime(l.last_ingest_at)}</span>
+                      ) : (
+                        <span className="font-medium text-warning">Še ni povezano s tabelo</span>
+                      )
+                    ) : (
+                      formatDate(l.created_at)
+                    )}
                     {(l.skipped_duplicates > 0 || l.skipped_suppressed > 0 || l.skipped_invalid > 0) && (
                       <span className="block text-[11px] text-ink-3" title="Preskočeno pri uvozu">
                         preskočeno: {n(l.skipped_duplicates + l.skipped_suppressed + l.skipped_invalid)}
                       </span>
                     )}
                   </TD>
-                  <TD className="whitespace-nowrap">{l.assigned_caller_id ? names[l.assigned_caller_id] : <span className="text-ink-3">Vse</span>}</TD>
+                  <TD>
+                    {membersOf(l.id).length === 0 ? (
+                      <span className="text-ink-3">Vse</span>
+                    ) : (
+                      membersOf(l.id).map((m) => (
+                        <span key={m.caller_id} className="mr-2 inline-flex items-center gap-1 whitespace-nowrap">
+                          {names[m.caller_id] ?? "–"}
+                          {m.notify && <Bell className="size-3.5 text-brand" aria-label="dobi obvestila" />}
+                        </span>
+                      ))
+                    )}
+                  </TD>
                   <TD className="text-right tabular">{n(s?.total)}</TD>
                   <TD className="text-right font-semibold tabular">{n(s?.due)}</TD>
                   <TD className="text-right tabular">{n(s?.byStatus.callback)}</TD>
@@ -77,6 +112,11 @@ export function ListsTable({ lists, stats, callers, names }: { lists: LeadList[]
                     <a href={`/api/export/leads?format=xlsx&list=${l.id}`} className="mr-1 inline-grid size-8 place-items-center rounded-md border border-line hover:border-gold" title="Izvozi seznam (Excel) s statusi in komentarji">
                       <Download className="size-4" />
                     </a>
+                    {l.kind === "live" && (
+                      <button onClick={() => setLinking(l)} className="mr-1 inline-grid size-8 place-items-center rounded-md border border-line hover:border-gold" title="Nova povezava z Google tabelo">
+                        <Link2 className="size-4" />
+                      </button>
+                    )}
                     <button onClick={() => setEditing(l)} className="mr-1 inline-grid size-8 place-items-center rounded-md border border-line hover:border-gold" title="Uredi">
                       <Pencil className="size-4" />
                     </button>
@@ -90,22 +130,53 @@ export function ListsTable({ lists, stats, callers, names }: { lists: LeadList[]
           </tbody>
         </Table>
       )}
-      {editing && <EditListDialog list={editing} callers={callers} onClose={() => setEditing(null)} />}
+      {editing && <EditListDialog list={editing} callers={callers} members={membersOf(editing.id)} onClose={() => setEditing(null)} />}
+      {linking && <RelinkDialog list={linking} onClose={() => setLinking(null)} />}
       <DeleteListDialog list={deleting} total={deleting ? (stats[deleting.id]?.total ?? 0) : 0} onClose={() => setDeleting(null)} />
     </Card>
   );
 }
 
-function EditListDialog({ list, callers, onClose }: { list: LeadList; callers: PersonOption[]; onClose: () => void }) {
+function RelinkDialog({ list, onClose }: { list: LeadList; onClose: () => void }) {
+  const { submit, pending, error } = useSubmit<{ token: string }>();
+  const [token, setToken] = useState<string | null>(null);
+  return (
+    <Dialog open onClose={onClose} title="Povezava z Google tabelo" description={list.name} size="lg">
+      {token ? (
+        <ScriptInstructions token={token} tab={list.source_tab ?? "SPECIALISTI"} />
+      ) : (
+        <div className="flex flex-col gap-3 text-sm">
+          <FormError message={error} />
+          <p>
+            Ustvari se <b>nova koda</b> za Google tabelo. Stara koda (če je že nameščena) takoj preneha delovati, zato novo prilepite namesto nje. Kontakti, ki so že v CRM, ostanejo; nič se ne podvoji.
+          </p>
+          <Button
+            variant="gold"
+            className="self-start"
+            loading={pending}
+            onClick={async () => {
+              const res = await submit(() => rotateLiveListToken({ list_id: list.id }));
+              if (res?.ok) setToken(res.data.token);
+            }}
+          >
+            Ustvari novo kodo
+          </Button>
+        </div>
+      )}
+    </Dialog>
+  );
+}
+
+function EditListDialog({ list, callers, members, onClose }: { list: LeadList; callers: PersonOption[]; members: ListMember[]; onClose: () => void }) {
   const router = useRouter();
   const { submit, pending, error } = useSubmit();
-  const [v, setV] = useState({ name: list.name, assigned_caller_id: list.assigned_caller_id ?? "", archived: list.status === "archived" });
+  const [v, setV] = useState({ name: list.name, archived: list.status === "archived" });
+  const [draft, setDraft] = useState<MemberDraft[]>(members.map((m) => ({ caller_id: m.caller_id, notify: m.notify })));
   return (
     <Dialog
       open
       onClose={onClose}
       title="Uredi klicni seznam"
-      size="sm"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -114,7 +185,7 @@ function EditListDialog({ list, callers, onClose }: { list: LeadList; callers: P
           <Button
             loading={pending}
             onClick={async () => {
-              const res = await submit(() => updateLeadList({ list_id: list.id, name: v.name, assigned_caller_id: v.assigned_caller_id || null, archived: v.archived }));
+              const res = await submit(() => updateLeadList({ list_id: list.id, name: v.name, archived: v.archived, members: draft }));
               if (res?.ok) {
                 router.refresh();
                 onClose();
@@ -131,16 +202,10 @@ function EditListDialog({ list, callers, onClose }: { list: LeadList; callers: P
         <Field label="Ime seznama">
           <Input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} />
         </Field>
-        <Field label="Kdo kliče ta seznam?">
-          <Select value={v.assigned_caller_id} onChange={(e) => setV({ ...v, assigned_caller_id: e.target.value })}>
-            <option value="">Vse klicateljice</option>
-            {callers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        <div>
+          <p className="mb-1.5 text-[13px] font-semibold">Kdo kliče ta seznam{list.kind === "live" ? " in kdo dobi obvestilo" : ""}?</p>
+          <MembersPicker callers={callers} value={draft} onChange={setDraft} showNotify={list.kind === "live"} />
+        </div>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" className="size-4 accent-[#c6a24b]" checked={v.archived} onChange={(e) => setV({ ...v, archived: e.target.checked })} />
           Arhiviraj (klicateljice seznama ne vidijo več, podatki ostanejo)

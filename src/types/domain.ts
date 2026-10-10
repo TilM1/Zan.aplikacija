@@ -191,13 +191,18 @@ export interface ActivityRow {
 // ---------------------------------------------------------------------------
 // Call lists
 // ---------------------------------------------------------------------------
-export type LeadStatus = "new" | "callback" | "rejected" | "appointment" | "do_not_call";
+export type LeadStatus = "new" | "callback" | "rejected" | "appointment" | "do_not_call" | "no_answer" | "invalid";
 
 export interface LeadList {
   id: string;
   name: string;
   source_file_name: string | null;
   status: "importing" | "ready" | "archived";
+  /** "live" lists are fed automatically (e.g. Google Sheet with ad leads). */
+  kind: "import" | "live";
+  source_label: string | null;
+  source_tab: string | null;
+  last_ingest_at: string | null;
   assigned_caller_id: string | null;
   total_rows: number;
   imported_count: number;
@@ -230,6 +235,12 @@ export interface Lead {
   last_comment: string | null;
   customer_id: string | null;
   existing_customer_id: string | null;
+  /** When the person submitted the form (live lists). */
+  source_created_at: string | null;
+  /** Set when an existing contact inquired (again) through a live source. */
+  reinquiry_at: string | null;
+  reinquiry_note: string | null;
+  no_answer_count: number;
   created_at: string;
 }
 
@@ -237,7 +248,7 @@ export interface LeadEvent {
   id: number;
   lead_id: string;
   actor_id: string | null;
-  action: "status_changed" | "comment" | "converted";
+  action: "status_changed" | "comment" | "converted" | "reinquiry";
   status_from: LeadStatus | null;
   status_to: LeadStatus | null;
   next_call_at: string | null;

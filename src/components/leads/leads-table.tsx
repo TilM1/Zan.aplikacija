@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Phone } from "lucide-react";
+import { Flame, Phone } from "lucide-react";
 import { Table, TD, TH, THead, TR, SortLink } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/misc";
@@ -15,6 +15,7 @@ export function LeadsTable({
   rows,
   names,
   listNames,
+  liveListIds,
   showList,
   sort,
   sortHrefs,
@@ -23,6 +24,7 @@ export function LeadsTable({
   rows: Lead[];
   names: Record<string, string>;
   listNames: Record<string, string>;
+  liveListIds: string[];
   showList: boolean;
   sort: string;
   sortHrefs: Record<string, { asc: string; desc: string }>;
@@ -40,6 +42,7 @@ export function LeadsTable({
     );
   };
 
+  const live = new Set(liveListIds);
   if (rows.length === 0) return <EmptyState icon={Phone} title="Ni kontaktov" description="Za izbrane filtre ni kontaktov. Poskusite spremeniti filter ali zavihek." />;
 
   return (
@@ -49,6 +52,7 @@ export function LeadsTable({
           <tr>
             {th("#", "row_number")}
             {th("Naziv", "name")}
+            {th("Oddano", "source_created_at", undefined, true)}
             <TH>Telefon</TH>
             {th("Kraj", "city")}
             {th("Pošta", "postal_code")}
@@ -69,8 +73,17 @@ export function LeadsTable({
                 <TD className="text-xs text-ink-3 tabular">{l.row_number}</TD>
                 <TD className="max-w-80">
                   <span className="block truncate font-semibold">{l.name}</span>
-                  {l.existing_customer_id && <span className="text-[11px] font-medium text-warning">Že stranka v CRM</span>}
+                  <span className="flex flex-wrap gap-1">
+                    {live.has(l.list_id) && <span className="rounded bg-ink px-1.5 text-[10px] font-bold tracking-wide text-gold">LIVE</span>}
+                    {l.reinquiry_note && (
+                      <span className="inline-flex items-center gap-0.5 rounded bg-gold px-1.5 text-[10px] font-bold text-ink" title={l.reinquiry_note}>
+                        <Flame className="size-3" /> DVOJNIK · DODATNO SE ZANIMA
+                      </span>
+                    )}
+                    {l.existing_customer_id && <span className="text-[11px] font-medium text-warning">Že stranka v CRM</span>}
+                  </span>
                 </TD>
+                <TD className="text-xs whitespace-nowrap text-ink-2 tabular">{l.source_created_at ? formatDateTime(l.source_created_at) : "–"}</TD>
                 <TD className="whitespace-nowrap">
                   <a href={`tel:${l.phone_normalized}`} onClick={(e) => e.stopPropagation()} className="font-medium text-brand tabular hover:underline">
                     {formatPhone(l.phone_normalized)}
@@ -81,6 +94,7 @@ export function LeadsTable({
                 <TD className="max-w-56 truncate text-ink-2">{l.activity}</TD>
                 <TD>
                   <Badge tone={st.tone}>{st.label}</Badge>
+                  {l.status === "no_answer" && l.no_answer_count > 0 && <span className="ml-1 text-[11px] text-ink-3">{l.no_answer_count}×</span>}
                 </TD>
                 <TD className="whitespace-nowrap tabular">{l.next_call_at && l.status !== "appointment" ? formatDate(l.next_call_at) : "–"}</TD>
                 <TD className="whitespace-nowrap text-ink-2 tabular">

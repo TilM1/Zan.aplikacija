@@ -88,6 +88,7 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   agent_product_multiplier_changed: "Provizija za produkt (število) spremenjena",
   product_saved: "Produkt shranjen",
   lead_list_imported: "Klicni seznam uvožen",
+  live_list_created: "Live klicni seznam ustvarjen",
   expiry_added: "Skadenca vpisana",
   expiry_updated: "Skadenca posodobljena",
   policy_cancelled: "Polica stornirana",
@@ -107,6 +108,8 @@ export const LEAD_STATUS_LABELS: Record<LeadStatus, { label: string; tone: Tone;
   rejected: { label: "Zavrnjen", tone: "neutral", hint: "Ponovni klic čez daljše obdobje" },
   appointment: { label: "Termin", tone: "success", hint: "Termin dogovorjen – stranka v CRM" },
   do_not_call: { label: "Ne kliči", tone: "danger", hint: "Ne želi klicev (trajno)" },
+  no_answer: { label: "Se ne javi", tone: "warning", hint: "Vrne se v seznam naslednji dan" },
+  invalid: { label: "Neveljavna št.", tone: "neutral", hint: "Številka ne obstaja / napačna" },
 };
 
 export const EXPIRY_CATEGORY_LABELS: Record<import("@/types/domain").ExpiryCategory, string> = {

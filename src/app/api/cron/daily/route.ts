@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   ]);
   const reminderDays = Number(setting?.value ?? 14);
 
-  const [appsToday, pending, expiries, followups, callbacks, lists] = await Promise.all([
+  const [appsToday, pending, expiries, followups, callbacks, lists, members] = await Promise.all([
     admin.from("appointments").select("agent_id").eq("status", "scheduled").gte("scheduled_at", start).lt("scheduled_at", end),
     admin.from("appointments").select("agent_id").eq("status", "scheduled").lt("scheduled_at", nowIso),
     admin
@@ -36,8 +36,9 @@ export async function GET(req: NextRequest) {
       .lte("expiry_date", addDays(today, reminderDays))
       .or(`snoozed_until.is.null,snoozed_until.lte.${today}`),
     admin.from("caller_followups").select("caller_id").eq("status", "open"),
-    admin.from("leads").select("list_id").eq("status", "callback").lt("next_call_at", end),
+    admin.from("leads").select("list_id").in("status", ["callback", "no_answer"]).lt("next_call_at", end),
     admin.from("lead_lists").select("id, assigned_caller_id").eq("status", "ready"),
+    admin.from("lead_list_members").select("list_id, caller_id"),
   ]);
 
   const countBy = <T,>(rows: T[] | null, key: (r: T) => string | null) => {
@@ -54,7 +55,19 @@ export async function GET(req: NextRequest) {
   const followupsBy = countBy(followups.data, (r) => r.caller_id);
   const listOwner = new Map((lists.data ?? []).map((l) => [l.id, l.assigned_caller_id as string | null]));
   const callbacksByList = countBy(callbacks.data, (r) => r.list_id);
-  const callers = (people ?? []).filter((p) => p.role === "caller");
+  // Same rule as crm_lead_lists_for: members decide; a list without members is for everyone.
+  const membersByList = new Map<string, Set<string>>();
+  for (const m of members.data ?? []) {
+    if (!membersByList.has(m.list_id)) membersByList.set(m.list_id, new Set());
+    membersByList.get(m.list_id)!.add(m.caller_id);
+  }
+  const seesList = (listId: string, callerId: string) => {
+    if (!listOwner.has(listId)) return false;
+    const set = membersByList.get(listId);
+    if (set) return set.has(callerId);
+    const assigned = listOwner.get(listId);
+    return assigned == null || assigned === callerId;
+  };
 
   let sent = 0;
   for (const p of people ?? []) {
@@ -71,8 +84,7 @@ export async function GET(req: NextRequest) {
     } else if (p.role === "caller") {
       let cb = 0;
       for (const [listId, n] of callbacksByList) {
-        const assigned = listOwner.get(listId);
-        if (assigned === p.id || (assigned === null && callers.length > 0)) cb += n;
+        if (seesList(listId, p.id)) cb += n;
       }
       const f = followupsBy.get(p.id) ?? 0;
       if (cb) lines.push(`${cb} ponovnih klicev danes`);

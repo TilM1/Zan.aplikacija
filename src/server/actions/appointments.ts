@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { notifyAppointmentAgent } from "@/server/events";
+import { syncAppointmentInvite } from "@/server/invites";
 import { z } from "zod";
 import { requireActor } from "@/lib/auth";
 import { localDateTimeToIso } from "@/lib/dates";
@@ -46,7 +47,10 @@ export async function createCustomerWithAppointment(input: unknown): Promise<Act
       p_lead_id: v.lead_id || null,
     });
     revalidatePath("/", "layout");
-    after(() => notifyAppointmentAgent(res.appointment_id, userId));
+    after(async () => {
+      await notifyAppointmentAgent(res.appointment_id, userId);
+      await syncAppointmentInvite(res.appointment_id);
+    });
     return { status: "created", ...res } as const;
   }, "Stranka in termin sta shranjena.");
 }
@@ -67,7 +71,10 @@ export async function scheduleAppointment(input: unknown): Promise<ActionResult<
       },
     });
     revalidatePath("/", "layout");
-    after(() => notifyAppointmentAgent(res.appointment_id, userId));
+    after(async () => {
+      await notifyAppointmentAgent(res.appointment_id, userId);
+      await syncAppointmentInvite(res.appointment_id);
+    });
     return res;
   }, "Nov termin je dogovorjen.");
 }
@@ -87,7 +94,10 @@ export async function updateAppointment(input: unknown): Promise<ActionResult> {
       },
     });
     revalidatePath("/", "layout");
-    after(() => notifyAppointmentAgent(v.appointment_id, userId, "changed"));
+    after(async () => {
+      await notifyAppointmentAgent(v.appointment_id, userId, "changed");
+      await syncAppointmentInvite(v.appointment_id);
+    });
     return undefined;
   }, "Termin je posodobljen.");
 }
@@ -97,6 +107,7 @@ export async function cancelAppointment(input: unknown): Promise<ActionResult> {
     const { userId } = await requireActor();
     const v = z.object({ appointment_id: z.string().uuid(), reason: z.string().trim().min(1, "Vnesite razlog.") }).parse(input);
     await callWorkflow("crm_cancel_appointment", { p_actor: userId, p_appointment_id: v.appointment_id, p_reason: v.reason });
+    after(() => syncAppointmentInvite(v.appointment_id));
     revalidatePath("/", "layout");
     return undefined;
   }, "Termin je preklican.");

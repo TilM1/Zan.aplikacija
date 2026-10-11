@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { notifyAppointmentAgent, notifyFollowupCaller } from "@/server/events";
+import { syncAppointmentInvite } from "@/server/invites";
 import { requireActor, isAgentLike } from "@/lib/auth";
 import { localDateTimeToIso } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
@@ -72,6 +73,7 @@ export async function recordResult(input: unknown): Promise<ActionResult<RecordR
     after(async () => {
       await notifyAppointmentAgent(res.next_appointment_id, userId);
       await notifyFollowupCaller(res.followup_id);
+      await syncAppointmentInvite(res.next_appointment_id);
     });
     return { ...res, customer_id: appt.customer_id };
   }, "Rezultat svetovanja je shranjen.");

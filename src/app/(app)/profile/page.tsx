@@ -4,7 +4,8 @@ import { ROLE_LABELS } from "@/lib/labels";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { KeyValue, PageHeader } from "@/components/ui/misc";
-import { ChangePasswordForm, OwnProfileForm } from "@/components/settings/profile-forms";
+import { ChangePasswordForm, InviteSettingsForm, OwnProfileForm } from "@/components/settings/profile-forms";
+import { mailConfig } from "@/server/mail";
 import { AppAndNotifications } from "@/components/pwa/app-and-notifications";
 import { formatDate } from "@/lib/dates";
 
@@ -48,6 +49,14 @@ export default async function ProfilePage() {
             <AppAndNotifications />
           </CardBody>
         </Card>
+        {profile.role !== "caller" && (
+          <Card>
+            <CardHeader title="Vabila na termin po e-pošti" description="Termini v vašem koledarju (Outlook, Google, Apple) – brez povezovanja računa." />
+            <CardBody>
+              <InviteSettingsForm initial={{ enabled: profile.invite_enabled, email: profile.invite_email ?? "" }} loginEmail={profile.email} configured={!!mailConfig()} />
+            </CardBody>
+          </Card>
+        )}
         <Card>
           <CardHeader title="Geslo" />
           <CardBody>

@@ -6,6 +6,7 @@ import { requireActor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { passwordSchema } from "@/lib/validation";
+import { sendTestInvite } from "@/server/invites";
 import { callWorkflow, runAction, WorkflowError, type ActionResult } from "@/server/workflow";
 
 export async function updateOwnProfile(input: unknown): Promise<ActionResult> {
@@ -18,6 +19,35 @@ export async function updateOwnProfile(input: unknown): Promise<ActionResult> {
     revalidatePath("/", "layout");
     return undefined;
   }, "Profil je shranjen.");
+}
+
+/** Calendar invitations by e-mail for own appointments: on/off and the address they go to. */
+export async function setInviteSettings(input: unknown): Promise<ActionResult> {
+  return runAction(async () => {
+    const { userId } = await requireActor(["owner", "agent"]);
+    const v = z
+      .object({ enabled: z.boolean(), email: z.string().trim().toLowerCase().max(200).refine((x) => x === "" || z.email().safeParse(x).success, "Vnesite veljaven e-poštni naslov.") })
+      .parse(input);
+    await callWorkflow("crm_set_invite_settings", { p_actor: userId, p_enabled: v.enabled, p_email: v.email });
+    revalidatePath("/profile");
+    return undefined;
+  }, "Nastavitve vabil so shranjene.");
+}
+
+/** Sends a test invitation to the user's invitation address. */
+export async function sendOwnTestInvite(): Promise<ActionResult<{ to: string }>> {
+  return runAction(async () => {
+    const { profile } = await requireActor(["owner", "agent"]);
+    const to = profile.invite_email || profile.email;
+    try {
+      await sendTestInvite(to, `${profile.first_name} ${profile.last_name}`);
+    } catch (e) {
+      if ((e as Error).message === "NOT_CONFIGURED") throw new WorkflowError("Pošiljanje e-pošte še ni nastavljeno. Lastnik mora v Vercel dodati podatke poštnega predala (SMTP).");
+      console.error("[invite] test failed", e);
+      throw new WorkflowError("Testnega vabila ni bilo mogoče poslati. Preverite nastavitve poštnega predala (SMTP).");
+    }
+    return { to };
+  });
 }
 
 /**

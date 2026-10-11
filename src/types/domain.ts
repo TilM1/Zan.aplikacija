@@ -22,6 +22,10 @@ export interface Profile {
   role: Role;
   is_active: boolean;
   is_demo: boolean;
+  /** Calendar invitations by e-mail for own appointments. */
+  invite_enabled: boolean;
+  /** Address for invitations; null = login e-mail. */
+  invite_email: string | null;
   created_at: string;
   updated_at: string;
 }

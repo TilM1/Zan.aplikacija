@@ -24,6 +24,8 @@ Example: 100 € × 12 × 10 × 10 % = **1,200 €**, split into:
 total = monthly_premium × caller_multiplier (per caller, default 1.5)
 ```
 
+Each Caller has **two tariffs**, both set by the Owner (Zaposleni → person): *navadni seznami* (`standard`) and *live seznami* (`live`, customers that came from a live/ads list). The tariff is fixed on the customer (`customers.caller_tariff`) when a live contact is turned into an appointment; a Caller without a live tariff gets the standard one. The database verifies the multiplier against the customer's tariff at sale.
+
 Example with ×1.5: 100 € → **150 €**, due on the same date as the Agent's first installment. With several policies from one consultation, each policy produces its own Agent and Caller commission.
 
 **Products with the "premija × število" model** (e.g. *Specialisti*, set per product in Settings)

@@ -48,6 +48,8 @@ export interface Customer {
   last_result: ConsultationResult | null;
   responsible_caller_id: string | null;
   current_agent_id: string | null;
+  /** Which caller tariff applies at sale: "live" when the customer came from a live list. */
+  caller_tariff: "standard" | "live";
   created_by: string;
   archived_at: string | null;
   is_demo: boolean;

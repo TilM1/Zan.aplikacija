@@ -29,6 +29,8 @@ export interface ResultTarget {
   agentId: string;
   callerId: string | null;
   callerName?: string;
+  /** "live" when the customer came from a live list (other caller tariff). */
+  callerTariff?: "standard" | "live";
 }
 
 export interface PolicyDraft {
@@ -86,7 +88,7 @@ export function RecordResultDialog({
           products={products}
           agentRatePercent={rates.agents[target.agentId] ?? null}
           agentMultipliers={rates.agentProducts[target.agentId] ?? {}}
-          callerMultiplier={target.callerId ? (rates.callers[target.callerId] ?? null) : null}
+          callerMultiplier={target.callerId ? ((target.callerTariff === "live" ? rates.callersLive : rates.callers)[target.callerId] ?? null) : null}
           onDone={onClose}
         />
       )}

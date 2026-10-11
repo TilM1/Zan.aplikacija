@@ -15,8 +15,13 @@ export default async function ProfilePage() {
   const supabase = await createClient();
   const { data } =
     profile.role === "caller"
-      ? await supabase.from("caller_commission_rates").select("value:multiplier").eq("caller_id", profile.id).order("effective_from", { ascending: false }).limit(1).maybeSingle()
+      ? await supabase.from("caller_commission_rates").select("value:multiplier").eq("caller_id", profile.id).eq("tariff", "standard").order("effective_from", { ascending: false }).limit(1).maybeSingle()
       : await supabase.from("agent_commission_rates").select("value:rate_percent").eq("agent_id", profile.id).order("effective_from", { ascending: false }).limit(1).maybeSingle();
+  const { data: live } =
+    profile.role === "caller"
+      ? await supabase.from("caller_commission_rates").select("value:multiplier").eq("caller_id", profile.id).eq("tariff", "live").order("effective_from", { ascending: false }).limit(1).maybeSingle()
+      : { data: null };
+  const liveRate = `× ${Number((live ?? data)?.value ?? 0).toLocaleString("sl-SI")} mesečne premije`;
   const rate = !data ? "ni nastavljeno" : profile.role === "caller" ? `× ${Number(data.value).toLocaleString("sl-SI")} mesečne premije` : `${Number(data.value).toLocaleString("sl-SI")} %`;
   return (
     <>
@@ -29,7 +34,8 @@ export default async function ProfilePage() {
               items={[
                 { label: "E-pošta (prijava)", value: profile.email },
                 { label: "Vloga", value: ROLE_LABELS[profile.role] },
-                { label: "Trenutna provizija", value: rate },
+                { label: profile.role === "caller" ? "Provizija – navadni seznami" : "Trenutna provizija", value: rate },
+                ...(profile.role === "caller" && data ? [{ label: "Provizija – live seznami (oglasi)", value: liveRate }] : []),
                 { label: "Račun ustvarjen", value: formatDate(profile.created_at) },
               ]}
             />

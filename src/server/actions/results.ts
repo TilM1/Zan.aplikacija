@@ -35,7 +35,7 @@ export async function recordResult(input: unknown): Promise<ActionResult<RecordR
     const supabase = await createClient();
     const { data: appt } = await supabase
       .from("appointments")
-      .select("id, agent_id, caller_id, customer_id, status")
+      .select("id, agent_id, caller_id, customer_id, status, customer:customers(caller_tariff)")
       .eq("id", v.appointment_id)
       .maybeSingle();
     if (!appt) throw new WorkflowError("Termin ne obstaja ali do njega nimate dostopa.");
@@ -46,6 +46,7 @@ export async function recordResult(input: unknown): Promise<ActionResult<RecordR
             appt.agent_id,
             appt.caller_id,
             v.policies.map((p) => ({ ...p, policy_number: p.policy_number || null, note: p.note || null })),
+            (appt.customer as unknown as { caller_tariff: "standard" | "live" } | null)?.caller_tariff ?? "standard",
           )
         : null;
 

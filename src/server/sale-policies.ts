@@ -7,12 +7,18 @@ import { WorkflowError } from "@/server/workflow";
  * per-product numbers and the caller's multiplier (never retroactive) and lets
  * the commission engine compute every commission record.
  */
-export async function buildSalePolicies(agentId: string, callerId: string | null, entries: PolicyEntry[]): Promise<PolicyPayload[]> {
+export async function buildSalePolicies(
+  agentId: string,
+  callerId: string | null,
+  entries: PolicyEntry[],
+  /** Caller tariff of the customer: "live" when the customer came from a live list. */
+  callerTariff: "standard" | "live" = "standard",
+): Promise<PolicyPayload[]> {
   const admin = createAdminClient();
   const productIds = [...new Set(entries.map((p) => p.product_id))];
   const [{ data: rate, error }, callerRes, productsRes, multRes] = await Promise.all([
     admin.rpc("current_agent_rate", { p_agent_id: agentId }),
-    callerId ? admin.rpc("current_caller_multiplier", { p_caller_id: callerId }) : Promise.resolve({ data: null, error: null }),
+    callerId ? admin.rpc("current_caller_multiplier_for", { p_caller_id: callerId, p_tariff: callerTariff }) : Promise.resolve({ data: null, error: null }),
     admin.from("products").select("id, name, commission_model").in("id", productIds),
     admin
       .from("agent_product_multipliers")

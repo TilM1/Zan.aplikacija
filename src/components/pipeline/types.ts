@@ -17,6 +17,7 @@ export interface PipelineCard {
   agentId: string;
   agentName: string;
   callerName: string | null;
+  callerTariff: "standard" | "live";
   callerId: string | null;
   note: string | null;
   canRecord: boolean;

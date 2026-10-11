@@ -38,7 +38,7 @@ export default async function EmployeePage({ params }: PageProps<"/employees/[id
   const supabase = await createClient();
   const [rates, prodMonth, prodTrend, results, installments, upcoming, multProducts, productMults] = await Promise.all([
     isCaller
-      ? supabase.from("caller_commission_rates").select("id, value:multiplier, effective_from, set_by").eq("caller_id", id).order("effective_from", { ascending: false }).order("created_at", { ascending: false })
+      ? supabase.from("caller_commission_rates").select("id, value:multiplier, tariff, effective_from, set_by").eq("caller_id", id).order("effective_from", { ascending: false }).order("created_at", { ascending: false })
       : supabase.from("agent_commission_rates").select("id, value:rate_percent, effective_from, set_by").eq("agent_id", id).order("effective_from", { ascending: false }).order("created_at", { ascending: false }),
     policyProduction(m.from, m.to, scope),
     policyProduction(trend.from, trend.to, scope),
@@ -56,7 +56,9 @@ export default async function EmployeePage({ params }: PageProps<"/employees/[id
   ]);
   const multProductList = (multProducts.data ?? []) as { id: string; name: string }[];
   const multRows = (productMults.data ?? []) as { id: string; product_id: string; value: number; effective_from: string; set_by: string | null }[];
-  const rateRows = (rates.data ?? []) as { id: string; value: number; effective_from: string; set_by: string | null }[];
+  type RateRow = { id: string; value: number; tariff?: string; effective_from: string; set_by: string | null };
+  const rateRows = ((rates.data ?? []) as RateRow[]).filter((r) => r.tariff !== "live");
+  const liveRows = ((rates.data ?? []) as RateRow[]).filter((r) => r.tariff === "live");
   const fmtRate = (v: number) => (isCaller ? `× ${Number(v).toLocaleString("sl-SI")}` : `${Number(v).toLocaleString("sl-SI")} %`);
   const s = summarize(installments, today);
   const paidTotal = sumDecimals(installments.filter((i) => i.status === "paid").map((i) => i.amount));
@@ -96,8 +98,8 @@ export default async function EmployeePage({ params }: PageProps<"/employees/[id
         <div className="flex flex-col gap-4">
           <Card id="provizija">
             <CardHeader
-              title={isCaller ? "Provizija klicatelja" : "Odstotek provizije"}
-              description={isCaller ? "Enkratno na polico: mesečna premija × faktor" : "Premija × 12 × leta × odstotek, izplačilo 55 / 20 / 25 %"}
+              title={isCaller ? "Provizija – navadni seznami" : "Odstotek provizije"}
+              description={isCaller ? "Stranke iz uvoženih (navadnih) klicnih seznamov. Enkratno na polico: mesečna premija × faktor" : "Premija × 12 × leta × odstotek, izplačilo 55 / 20 / 25 %"}
             />
             <CardBody className="flex flex-col gap-4">
               <RateForm employeeId={id} kind={isCaller ? "caller" : "agent"} current={rateRows[0] ? String(Number(rateRows[0].value)) : null} />
@@ -125,6 +127,41 @@ export default async function EmployeePage({ params }: PageProps<"/employees/[id
               )}
             </CardBody>
           </Card>
+          {isCaller && (
+            <Card id="provizija-live">
+              <CardHeader title="Provizija – live seznami (oglasi)" description="Stranke, ki so prišle iz live seznama (Google Sheets / oglasi). Enkratno na polico: mesečna premija × faktor" />
+              <CardBody className="flex flex-col gap-4">
+                {liveRows.length === 0 && (
+                  <p className="rounded-md bg-warning-soft px-3 py-2 text-xs text-warning">
+                    Ni nastavljeno – tudi za stranke iz live seznamov trenutno velja navadna tarifa{rateRows[0] ? ` (× ${Number(rateRows[0].value).toLocaleString("sl-SI")})` : ""}.
+                  </p>
+                )}
+                <RateForm employeeId={id} kind="caller" tariff="live" current={liveRows[0] ? String(Number(liveRows[0].value)) : null} />
+                {liveRows.length > 0 && (
+                  <Table>
+                    <THead>
+                      <tr>
+                        <TH>Velja od</TH>
+                        <TH className="text-right">Faktor</TH>
+                        <TH>Nastavil</TH>
+                      </tr>
+                    </THead>
+                    <tbody>
+                      {liveRows.map((r, i) => (
+                        <TR key={r.id}>
+                          <TD className="tabular">
+                            {formatDateTime(r.effective_from)} {i === 0 && <Badge tone="success">trenutno</Badge>}
+                          </TD>
+                          <TD className="text-right tabular">{fmtRate(r.value)}</TD>
+                          <TD className="text-ink-2">{r.set_by ? nameOf(people, r.set_by) : "sistem"}</TD>
+                        </TR>
+                      ))}
+                    </tbody>
+                  </Table>
+                )}
+              </CardBody>
+            </Card>
+          )}
           {!isCaller &&
             multProductList.map((prod) => {
               const hist = multRows.filter((r) => r.product_id === prod.id);

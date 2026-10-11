@@ -74,8 +74,8 @@ export async function setAgentRate(input: unknown): Promise<ActionResult> {
 export async function setCallerMultiplier(input: unknown): Promise<ActionResult> {
   return runAction(async () => {
     const { userId } = await requireActor(["owner"]);
-    const v = z.object({ caller_id: z.string().uuid(), multiplier: callerMultiplierSchema }).parse(input);
-    await callWorkflow("crm_set_caller_multiplier", { p_actor: userId, p_caller_id: v.caller_id, p_multiplier: v.multiplier });
+    const v = z.object({ caller_id: z.string().uuid(), multiplier: callerMultiplierSchema, tariff: z.enum(["standard", "live"]).default("standard") }).parse(input);
+    await callWorkflow("crm_set_caller_multiplier", { p_actor: userId, p_caller_id: v.caller_id, p_multiplier: v.multiplier, p_tariff: v.tariff });
     revalidatePath(`/employees/${v.caller_id}`);
     revalidatePath("/employees");
     return undefined;

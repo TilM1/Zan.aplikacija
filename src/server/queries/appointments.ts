@@ -6,7 +6,7 @@ export const APPOINTMENT_SORTS = ["scheduled_at", "visit_number", "status", "res
 import type { AppointmentWithRelations, Profile } from "@/types/domain";
 
 export const APPOINTMENT_SELECT =
-  "*, customer:customers!inner(id, first_name, last_name, phone, email, address, postal_code, city, status, search_text)";
+  "*, customer:customers!inner(id, first_name, last_name, phone, email, address, postal_code, city, status, search_text, caller_tariff)";
 
 export type AgentScope = { kind: "me" } | { kind: "all" } | { kind: "agent"; id: string };
 

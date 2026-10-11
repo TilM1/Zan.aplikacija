@@ -91,7 +91,7 @@ export function CustomerActions({
 
       {open && (
         <RecordResultDialog
-          target={mode === "result" ? { id: open.id, customerId: customer.id, customerName: name, scheduledAt: open.scheduledAt, agentId: open.agentId, callerId: open.callerId, callerName: open.callerName } : null}
+          target={mode === "result" ? { id: open.id, customerId: customer.id, customerName: name, scheduledAt: open.scheduledAt, agentId: open.agentId, callerId: open.callerId, callerName: open.callerName, callerTariff: customer.caller_tariff } : null}
           agents={agents}
           products={products}
           rates={rates}

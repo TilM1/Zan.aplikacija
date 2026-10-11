@@ -38,7 +38,7 @@ export function AppointmentRowActions({
         </>
       )}
       <RecordResultDialog
-        target={mode === "result" ? { id: card.id, customerId: card.customerId, customerName: card.customerName, scheduledAt: card.scheduledAt, agentId: card.agentId, callerId: card.callerId, callerName: card.callerName ?? undefined } : null}
+        target={mode === "result" ? { id: card.id, customerId: card.customerId, customerName: card.customerName, scheduledAt: card.scheduledAt, agentId: card.agentId, callerId: card.callerId, callerName: card.callerName ?? undefined, callerTariff: card.callerTariff } : null}
         agents={agents}
         products={products}
         rates={rates}

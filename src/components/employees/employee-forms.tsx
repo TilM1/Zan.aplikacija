@@ -175,7 +175,7 @@ export function EditEmployeeForm({ employee, isSelf }: { employee: { id: string;
  * Change an employee's commission: agent rate (%) or caller multiplier (×).
  * Always creates a new history entry; existing policies keep the value they were sold with.
  */
-export function RateForm({ employeeId, kind, current, productId }: { employeeId: string; kind: "agent" | "caller" | "product"; current: string | null; productId?: string }) {
+export function RateForm({ employeeId, kind, current, productId, tariff = "standard" }: { employeeId: string; kind: "agent" | "caller" | "product"; current: string | null; productId?: string; tariff?: "standard" | "live" }) {
   const router = useRouter();
   const { submit, pending, error } = useSubmit();
   const [value, setValue] = useState(current?.replace(".", ",") ?? "");
@@ -201,7 +201,7 @@ export function RateForm({ employeeId, kind, current, productId }: { employeeId:
                 kind === "agent"
                   ? setAgentRate({ agent_id: employeeId, rate_percent: value })
                   : kind === "caller"
-                    ? setCallerMultiplier({ caller_id: employeeId, multiplier: value })
+                    ? setCallerMultiplier({ caller_id: employeeId, multiplier: value, tariff })
                     : setAgentProductMultiplier({ agent_id: employeeId, product_id: productId, multiplier: value }),
               );
               if (res?.ok) {

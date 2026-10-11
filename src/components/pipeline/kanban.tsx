@@ -61,6 +61,7 @@ export function KanbanBoard({
     agentId: c.agentId,
     callerId: c.callerId,
     callerName: c.callerName ?? undefined,
+    callerTariff: c.callerTariff,
   });
 
   return (

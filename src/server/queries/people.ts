@@ -32,8 +32,10 @@ export const toOptions = (list: Profile[]): PersonOption[] => list.map((p) => ({
 export interface CommissionRates {
   /** agent id → current rate % ("10.00") */
   agents: Record<string, string>;
-  /** caller id → current multiplier ("1.5") */
+  /** caller id → current multiplier ("1.5") for customers from regular call lists */
   callers: Record<string, string>;
+  /** caller id → current multiplier for customers from live lists (falls back to `callers` when not set) */
+  callersLive: Record<string, string>;
   /** agent id → product id → current multiplier ("12") for "premija × število" products */
   agentProducts: Record<string, Record<string, string>>;
 }
@@ -49,7 +51,7 @@ export async function getVisibleCommissionRates(): Promise<CommissionRates> {
     getVisibleAgentRates(),
     supabase
       .from("caller_commission_rates")
-      .select("caller_id, multiplier, effective_from, created_at")
+      .select("caller_id, tariff, multiplier, effective_from, created_at")
       .order("effective_from", { ascending: false })
       .order("created_at", { ascending: false }),
     supabase
@@ -59,13 +61,18 @@ export async function getVisibleCommissionRates(): Promise<CommissionRates> {
       .order("created_at", { ascending: false }),
   ]);
   const callerMap: Record<string, string> = {};
-  for (const r of callers.data ?? []) if (!(r.caller_id in callerMap)) callerMap[r.caller_id] = String(Number(r.multiplier));
+  const callerLive: Record<string, string> = {};
+  for (const r of callers.data ?? []) {
+    const m = r.tariff === "live" ? callerLive : callerMap;
+    if (!(r.caller_id in m)) m[r.caller_id] = String(Number(r.multiplier));
+  }
+  const callersLive = { ...callerMap, ...callerLive };
   const agentProducts: Record<string, Record<string, string>> = {};
   for (const r of productMults.data ?? []) {
     const m = (agentProducts[r.agent_id] ??= {});
     if (!(r.product_id in m)) m[r.product_id] = String(Number(r.multiplier));
   }
-  return { agents, callers: callerMap, agentProducts };
+  return { agents, callers: callerMap, callersLive, agentProducts };
 }
 
 async function getVisibleAgentRates(): Promise<Record<string, string>> {

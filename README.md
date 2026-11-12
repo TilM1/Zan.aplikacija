@@ -1,4 +1,4 @@
-# CoreMark CRM
+# ZZ Partnerji CRM
 
 Internal CRM for an insurance sales team: **Callers** book consultations, **Agents** run them and record results (A / A0 / A1 / B), policies are captured with private PDF uploads, and a **commission engine** produces an auditable payout ledger for the **Owner**.
 

@@ -78,7 +78,7 @@ export function InviteSettingsForm({ initial, loginEmail, configured }: { initia
         <p className="rounded-md bg-warning-soft px-3 py-2 text-xs text-warning">Pošiljanje e-pošte še ni nastavljeno, zato se vabila trenutno ne pošiljajo. Nastavi ga lastnik (poštni predal v Vercel).</p>
       )}
       <label className="flex items-center gap-3">
-        <input type="checkbox" className="size-5 accent-[#c6a24b]" checked={v.enabled} onChange={(e) => setV({ ...v, enabled: e.target.checked })} />
+        <input type="checkbox" className="size-5 accent-ink" checked={v.enabled} onChange={(e) => setV({ ...v, enabled: e.target.checked })} />
         <span className="font-medium">Pošlji mi vabilo za koledar ob vsakem novem ali spremenjenem terminu</span>
       </label>
       <Field label="E-poštni naslov za vabila" error={fieldErrors.email} hint={`Prazno = ${loginEmail}. Vpišite naslov, katerega koledar uporabljate (npr. službeni Outlook).`}>

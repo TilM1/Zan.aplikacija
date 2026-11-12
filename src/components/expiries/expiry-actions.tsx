@@ -95,7 +95,7 @@ export function ExpiryActions({ id, category }: { id: string; category: string }
           </Field>
           {mode === "done" && (
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" className="size-4 accent-[#c6a24b]" checked={repeat} onChange={(e) => setRepeat(e.target.checked)} />
+              <input type="checkbox" className="size-4 accent-ink" checked={repeat} onChange={(e) => setRepeat(e.target.checked)} />
               Opomni me spet čez 1 leto (naslednja skadenca)
             </label>
           )}

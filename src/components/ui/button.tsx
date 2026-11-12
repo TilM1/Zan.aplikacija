@@ -6,7 +6,7 @@ type Variant = "primary" | "gold" | "secondary" | "ghost" | "danger" | "success"
 type Size = "sm" | "md";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-ink text-white hover:bg-black shadow-sm",
+  primary: "bg-ink text-white hover:bg-ink-hover shadow-sm",
   /** The main action of a screen (e.g. "Nov termin", "Vnesi rezultat"). */
   gold: "bg-gold text-ink hover:bg-gold-hover shadow-sm font-semibold",
   secondary: "bg-surface text-ink border border-line-strong hover:bg-subtle shadow-xs",

@@ -10,7 +10,7 @@ export function mailConfig() {
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return null;
   const port = Number(SMTP_PORT || 587);
   const from = MAIL_FROM || SMTP_USER;
-  return { host: SMTP_HOST, port, user: SMTP_USER, pass: SMTP_PASS, from, fromName: process.env.MAIL_FROM_NAME || "CoreMark CRM" };
+  return { host: SMTP_HOST, port, user: SMTP_USER, pass: SMTP_PASS, from, fromName: process.env.MAIL_FROM_NAME || "ZZ Partnerji CRM" };
 }
 
 let transport: nodemailer.Transporter | null = null;

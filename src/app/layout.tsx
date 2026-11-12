@@ -8,11 +8,11 @@ const inter = Inter({ subsets: ["latin", "latin-ext"], variable: "--font-inter" 
 const montserrat = Montserrat({ subsets: ["latin", "latin-ext"], variable: "--font-montserrat", weight: ["400", "500", "600"] });
 
 export const metadata: Metadata = {
-  title: { default: "CoreMark CRM", template: "%s · CoreMark CRM" },
-  description: "CoreMark – interni CRM za svetovanje in prodajo zavarovanj",
+  title: { default: "ZZ Partnerji CRM", template: "%s · ZZ Partnerji CRM" },
+  description: "ZZ Partnerji – interni CRM za svetovanje in prodajo zavarovanj",
   robots: { index: false, follow: false },
-  applicationName: "CoreMark CRM",
-  appleWebApp: { capable: true, title: "CoreMark", statusBarStyle: "default" },
+  applicationName: "ZZ Partnerji CRM",
+  appleWebApp: { capable: true, title: "ZZ Partnerji", statusBarStyle: "default" },
   formatDetection: { telephone: false },
 };
 

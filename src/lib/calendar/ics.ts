@@ -50,7 +50,7 @@ const cn = (s: string) => `"${s.replace(/"/g, "")}"`;
 export function buildInviteIcs(e: InviteEvent): string {
   const lines = [
     "BEGIN:VCALENDAR",
-    "PRODID:-//CoreMark CRM//SL",
+    "PRODID:-//ZZ Partnerji CRM//SL",
     "VERSION:2.0",
     "CALSCALE:GREGORIAN",
     `METHOD:${e.method}`,

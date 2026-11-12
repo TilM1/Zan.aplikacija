@@ -57,7 +57,7 @@ export function LeadDialog({
             <ChevronLeft className="size-4" /> Prejšnji
           </Button>
           <label className="flex items-center gap-2 text-xs text-ink-2">
-            <input type="checkbox" className="accent-[#c6a24b]" checked={autoNext} onChange={(e) => setAutoNext(e.target.checked)} />
+            <input type="checkbox" className="accent-ink" checked={autoNext} onChange={(e) => setAutoNext(e.target.checked)} />
             Po shranjevanju odpri naslednjega
           </label>
           <Button variant="secondary" size="sm" disabled={!nextId} onClick={() => nextId && onOpenChange(nextId)}>
@@ -186,7 +186,7 @@ function LeadBody({ id, names, recallMonths, onSaved }: { id: string; names: Rec
       )}
       <a
         href={`tel:${lead.phone_normalized}`}
-        className="flex items-center justify-center gap-3 rounded-xl bg-ink px-4 py-3.5 text-lg font-semibold text-white tabular hover:bg-black"
+        className="flex items-center justify-center gap-3 rounded-xl bg-ink px-4 py-3.5 text-lg font-semibold text-white tabular hover:bg-ink-hover"
       >
         <Phone className="size-5 text-gold" /> {formatPhone(lead.phone_normalized)}
       </a>

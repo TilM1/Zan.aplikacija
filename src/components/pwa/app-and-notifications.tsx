@@ -105,7 +105,7 @@ export function AppAndNotifications() {
           <Smartphone className="size-4 text-brand" /> Aplikacija na začetnem zaslonu
         </p>
         {env.standalone ? (
-          <p className="rounded-lg bg-success-soft px-3 py-2 text-success">✓ CoreMark je nameščen kot aplikacija na tej napravi.</p>
+          <p className="rounded-lg bg-success-soft px-3 py-2 text-success">✓ ZZ Partnerji je nameščen kot aplikacija na tej napravi.</p>
         ) : installEvt ? (
           <Button
             variant="gold"
@@ -128,7 +128,7 @@ export function AppAndNotifications() {
             <li>
               Izberite <b>»Dodaj na začetni zaslon«</b> in potrdite z »Dodaj«.
             </li>
-            <li>Odprite CoreMark z ikone na začetnem zaslonu in se prijavite.</li>
+            <li>Odprite ZZ Partnerji z ikone na začetnem zaslonu in se prijavite.</li>
           </ol>
         ) : (
           <ol className="list-decimal space-y-1 pl-5 text-ink-2">
@@ -149,7 +149,7 @@ export function AppAndNotifications() {
         </p>
         <p className="text-ink-3">Nov termin, stranka za ponovni klic, jutranji povzetek (skadence, klici, termini brez rezultata).</p>
         {iosNeedsInstall ? (
-          <p className="rounded-lg bg-warning-soft px-3 py-2 text-warning">Na iPhonu obvestila delujejo samo, ko je CoreMark dodan na začetni zaslon (zgoraj). Nato ga odprite z ikone in tu vklopite obvestila.</p>
+          <p className="rounded-lg bg-warning-soft px-3 py-2 text-warning">Na iPhonu obvestila delujejo samo, ko je ZZ Partnerji dodan na začetni zaslon (zgoraj). Nato ga odprite z ikone in tu vklopite obvestila.</p>
         ) : !env.supported ? (
           <p className="rounded-lg bg-subtle px-3 py-2 text-ink-2">Ta brskalnik ne podpira obvestil.</p>
         ) : env.permission === "denied" ? (

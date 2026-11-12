@@ -32,11 +32,11 @@ export function MembersPicker({ callers, value, onChange, showNotify = true }: {
         return (
           <label key={c.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-x-6 border-b border-line px-3 py-2 text-sm last:border-0">
             <span>{c.name}</span>
-            <input type="checkbox" className="size-5 justify-self-center accent-[#c6a24b]" checked={!!m} onChange={(e) => toggle(c.id, e.target.checked)} aria-label={`${c.name} vidi seznam`} />
+            <input type="checkbox" className="size-5 justify-self-center accent-ink" checked={!!m} onChange={(e) => toggle(c.id, e.target.checked)} aria-label={`${c.name} vidi seznam`} />
             {showNotify && (
               <input
                 type="checkbox"
-                className="size-5 justify-self-center accent-[#c6a24b] disabled:opacity-30"
+                className="size-5 justify-self-center accent-ink disabled:opacity-30"
                 checked={!!m?.notify}
                 disabled={!m}
                 onChange={(e) => setNotify(c.id, e.target.checked)}

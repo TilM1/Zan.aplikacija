@@ -1,8 +1,10 @@
 import { cn } from "@/lib/utils";
 
 /**
- * CoreMark wordmark, rendered as text so it stays crisp at any size and on
- * light or dark backgrounds: CORE | MARK with a gold divider.
+ * ZZ Partnerji wordmark: ZZ | PARTNERJI with the tagline "Vaš zavarovalni
+ * partner", drawn as SVG text (Montserrat) so it stays crisp at any size and
+ * on light (tone="dark") or dark green (tone="light") backgrounds.
+ * Proportions follow the official horizontal logo.
  */
 export function Logo({
   tone = "dark",
@@ -15,28 +17,39 @@ export function Logo({
   tagline?: boolean;
   className?: string;
 }) {
-  const text = size === "lg" ? "text-3xl" : size === "md" ? "text-xl" : "text-base";
+  const width = size === "lg" ? "w-full max-w-80" : size === "md" ? "w-[200px]" : "w-32";
+  const main = tone === "dark" ? "#023933" : "#ffffff";
+  const sub = tone === "dark" ? "#3a6460" : "rgb(255 255 255 / 0.6)";
+  // without the tagline, PARTNERJI is centred against ZZ
+  const partnerjiY = tagline ? 19 : 23.75;
   return (
-    <span className={cn("inline-flex flex-col", className)} aria-label="CoreMark – celovita zavarovanja">
-      <span className={cn("flex items-center font-brand leading-none font-normal tracking-[0.14em]", text)}>
-        <span className={tone === "dark" ? "text-ink" : "text-white"}>CORE</span>
-        <span className="mx-[0.45em] h-[1.15em] w-[2px] bg-gold" aria-hidden />
-        <span className="text-gold">MARK</span>
-      </span>
+    <svg
+      viewBox="0 0 229 34.5"
+      role="img"
+      aria-label="ZZ Partnerji – vaš zavarovalni partner"
+      className={cn("block h-auto font-brand", width, className)}
+    >
+      <text x="1" y="30.5" fontSize="38.6" fontWeight="400" fill={main} textLength="47.5" lengthAdjust="spacingAndGlyphs">
+        ZZ
+      </text>
+      <rect x="61.5" y="0.5" width="1.6" height="33.5" fill="#c4ae86" />
+      <text x="75" y={partnerjiY} fontSize="18.6" fontWeight="500" fill={main} textLength="144" lengthAdjust="spacing">
+        PARTNERJI
+      </text>
       {tagline && (
-        <span className={cn("mt-2 font-brand text-[0.62rem] font-medium tracking-[0.42em] uppercase", tone === "dark" ? "text-ink-3" : "text-white/55")}>
-          Celovita zavarovanja
-        </span>
+        <text x="75" y="29.5" fontSize="6.7" fontWeight="500" fill={sub} textLength="153" lengthAdjust="spacing">
+          VAŠ ZAVAROVALNI PARTNER
+        </text>
       )}
-    </span>
+    </svg>
   );
 }
 
-/** Compact C|M mark (e.g. collapsed header). */
+/** Compact ZZ|P mark (e.g. collapsed header). */
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-[3px] font-sans text-lg leading-none font-black text-ink", className)} aria-hidden>
-      C<span className="h-[0.95em] w-[3px] bg-gold" />M
+    <span className={cn("inline-flex items-center gap-[0.2em] font-brand text-lg leading-none font-normal text-ink", className)} aria-hidden>
+      ZZ<span className="h-[1.1em] w-[2px] bg-gold" />P
     </span>
   );
 }

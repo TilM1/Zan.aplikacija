@@ -107,15 +107,15 @@ export async function sendTestInvite(to: string, attendeeName: string) {
   await sendCalendarMail({
     to,
     method: "REQUEST",
-    subject: "Testno vabilo – CoreMark CRM",
-    text: "To je testno vabilo iz CoreMark CRM. Če ga vidite kot dogodek v koledarju, vabila delujejo. Dogodek lahko izbrišete.",
+    subject: "Testno vabilo – ZZ Partnerji CRM",
+    text: "To je testno vabilo iz ZZ Partnerji CRM. Če ga vidite kot dogodek v koledarju, vabila delujejo. Dogodek lahko izbrišete.",
     ics: buildInviteIcs({
       uid: `test-${start.getTime()}-${Math.round(start.getTime() / 7)}@${cfg.from.split("@")[1] ?? "crm"}`,
       sequence: 0,
       method: "REQUEST",
       start: start.toISOString(),
       end: new Date(start.getTime() + 15 * 60_000).toISOString(),
-      summary: "Testno vabilo – CoreMark CRM",
+      summary: "Testno vabilo – ZZ Partnerji CRM",
       description: "Testno vabilo. Dogodek lahko izbrišete.",
       location: "",
       organizer: { name: cfg.fromName, email: cfg.from },

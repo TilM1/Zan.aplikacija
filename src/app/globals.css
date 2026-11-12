@@ -1,33 +1,38 @@
 @import "tailwindcss";
 
 /*
- * CoreMark palette — from the agency logo:
- * black (#1C1C1C), gold (#C6A24B) on warm off-white.
- * "brand" = dark gold for links/accents on light backgrounds (AA contrast),
- * "gold" = logo gold for highlights, focus and key actions (with dark text).
+ * ZZ Partnerji palette — from the agency logo:
+ * deep green (#023933), sand gold (#C4AE86), beige (#E7DBC5), sage (#97A292).
+ * "ink"   = deep logo green for text and dark surfaces (buttons, badges).
+ * "brand" = slate green (logo tagline) for links/accents on light backgrounds.
+ * "gold"  = sand gold for highlights, focus and key actions (with ink text).
  */
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-brand: var(--font-montserrat), var(--font-inter), ui-sans-serif, sans-serif;
 
-  --color-canvas: #f7f6f2;
+  --color-canvas: #f6f3ec;
   --color-surface: #ffffff;
-  --color-subtle: #f3f1ec;
-  --color-line: #e7e3da;
-  --color-line-strong: #d4cfc3;
-  --color-ink: #1c1c1c;
-  --color-ink-2: #45443f;
-  --color-ink-3: #77736a;
+  --color-subtle: #f1ece1;
+  --color-line: #e6dfd1;
+  --color-line-strong: #d2c8b4;
+  --color-ink: #023933;
+  --color-ink-hover: #012a25;
+  --color-ink-2: #34524d;
+  --color-ink-3: #5f736e;
 
-  --color-brand: #8a6a1f;
-  --color-brand-hover: #6f5518;
-  --color-brand-soft: #f7f0dc;
+  --color-brand: #2f5c55;
+  --color-brand-hover: #023933;
+  --color-brand-soft: #e7efec;
 
-  --color-gold: #c6a24b;
-  --color-gold-hover: #b38f3a;
-  --color-gold-soft: #faf5e6;
+  --color-gold: #c4ae86;
+  --color-gold-hover: #b39b6f;
+  --color-gold-soft: #f6f0e4;
 
-  --color-sidebar: #161616;
+  --color-beige: #e7dbc5;
+  --color-sage: #97a292;
+
+  --color-sidebar: #023933;
 
   --color-info: #2a5aa0;
   --color-info-soft: #e9f0fa;
@@ -58,7 +63,7 @@
     background: var(--color-gold-soft);
   }
   dialog::backdrop {
-    background: rgb(20 20 20 / 0.5);
+    background: rgb(2 30 27 / 0.5);
   }
   :focus-visible {
     outline: 2px solid var(--color-gold);

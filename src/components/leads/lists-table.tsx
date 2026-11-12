@@ -207,7 +207,7 @@ function EditListDialog({ list, callers, members, onClose }: { list: LeadList; c
           <MembersPicker callers={callers} value={draft} onChange={setDraft} showNotify={list.kind === "live"} />
         </div>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" className="size-4 accent-[#c6a24b]" checked={v.archived} onChange={(e) => setV({ ...v, archived: e.target.checked })} />
+          <input type="checkbox" className="size-4 accent-ink" checked={v.archived} onChange={(e) => setV({ ...v, archived: e.target.checked })} />
           Arhiviraj (klicateljice seznama ne vidijo več, podatki ostanejo)
         </label>
       </div>

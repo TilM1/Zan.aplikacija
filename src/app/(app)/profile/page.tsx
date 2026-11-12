@@ -44,7 +44,7 @@ export default async function ProfilePage() {
           </CardBody>
         </Card>
         <Card>
-          <CardHeader title="Aplikacija in obvestila" description="Namestite CoreMark na telefon in vklopite obvestila." />
+          <CardHeader title="Aplikacija in obvestila" description="Namestite ZZ Partnerji na telefon in vklopite obvestila." />
           <CardBody>
             <AppAndNotifications />
           </CardBody>

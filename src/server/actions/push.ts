@@ -39,7 +39,7 @@ export async function sendTestNotification(): Promise<ActionResult<number>> {
   return runAction(async () => {
     const { userId } = await requireActor();
     if (!pushConfigured()) throw new WorkflowError("Obvestila na strežniku še niso nastavljena (manjkajo ključi VAPID).");
-    const n = await notifyUsers([userId], { title: "CoreMark CRM", body: "Obvestila delujejo ✓", url: "/profile", tag: "test" });
+    const n = await notifyUsers([userId], { title: "ZZ Partnerji CRM", body: "Obvestila delujejo ✓", url: "/profile", tag: "test" });
     if (n === 0) throw new WorkflowError("Ni aktivne naprave za obvestila. Najprej vklopite obvestila.");
     return n;
   }, "Testno obvestilo je poslano.");

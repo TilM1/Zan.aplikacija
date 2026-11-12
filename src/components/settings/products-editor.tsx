@@ -142,7 +142,7 @@ function ProductRow({
           </label>
         </div>
         <label className="flex items-center justify-center" title="Aktiven produkt se ponuja pri vnosu police">
-          <input type="checkbox" className="size-4 accent-[#c6a24b]" checked={v.is_active} onChange={(e) => setV({ ...v, is_active: e.target.checked })} aria-label="Aktiven" />
+          <input type="checkbox" className="size-4 accent-ink" checked={v.is_active} onChange={(e) => setV({ ...v, is_active: e.target.checked })} aria-label="Aktiven" />
         </label>
         <div className="flex gap-1">
           {dirty && (

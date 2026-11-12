@@ -61,12 +61,12 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/export/[data
   try {
     if (dataset === "all") {
       const wb = new ExcelJS.Workbook();
-      wb.creator = "CoreMark CRM";
+      wb.creator = "ZZ Partnerji CRM";
       wb.created = new Date();
       for (const ds of EXPORT_DATASETS) addSheet(wb, ds.label, await fetchAll(ds, from, to));
       const buf = await wb.xlsx.writeBuffer();
       return new NextResponse(buf, {
-        headers: { ...headers, "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="coremark-izvoz-vse-${stamp}.xlsx"` },
+        headers: { ...headers, "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="zz-partnerji-izvoz-vse-${stamp}.xlsx"` },
       });
     }
 
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/export/[data
     if (!ds) return NextResponse.json({ error: "Unknown dataset" }, { status: 404 });
     const rows = await fetchAll(ds, from, to, list);
     const listName = list && rows[0] && typeof rows[0].list_name === "string" ? `-${String(rows[0].list_name).replace(/[^\w-]+/g, "_").slice(0, 40)}` : "";
-    const base = `coremark-${ds.key}${listName}-${stamp}${from || to ? `_${from ?? ""}_${to ?? ""}` : ""}`;
+    const base = `zz-partnerji-${ds.key}${listName}-${stamp}${from || to ? `_${from ?? ""}_${to ?? ""}` : ""}`;
 
     if (format === "xlsx") {
       const wb = new ExcelJS.Workbook();

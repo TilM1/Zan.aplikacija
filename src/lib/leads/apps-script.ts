@@ -5,7 +5,7 @@
  */
 export function buildAppsScript(opts: { origin: string; token: string; tab: string }): string {
   return `/**
- * CoreMark CRM – samodejni prenos novih kontaktov iz te tabele v CRM.
+ * ZZ Partnerji CRM – samodejni prenos novih kontaktov iz te tabele v CRM.
  * 1) Prilepite to kodo (zamenjajte vse, kar je v oknu).
  * 2) Zgoraj izberite funkcijo "namesti" in kliknite "Zaženi" (enkrat).
  * 3) Potrdite dovoljenja z vašim Google računom.

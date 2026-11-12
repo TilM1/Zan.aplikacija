@@ -1,5 +1,5 @@
 /*
- * CoreMark CRM service worker: notifications only.
+ * ZZ Partnerji CRM service worker: notifications only.
  * Deliberately NO offline caching – customer and payroll data must never be
  * stored in the browser cache.
  */
@@ -11,9 +11,9 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "CoreMark CRM", body: event.data ? event.data.text() : "" };
+    data = { title: "ZZ Partnerji CRM", body: event.data ? event.data.text() : "" };
   }
-  const title = data.title || "CoreMark CRM";
+  const title = data.title || "ZZ Partnerji CRM";
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || "",

@@ -6,7 +6,9 @@ import { formatDecimalEur } from "@/lib/money";
 import { formatPhone, normalizePhone } from "@/lib/phone";
 import {
   COMMAND_TITLES,
+  KEYBOARD_BUTTONS,
   TELEGRAM_COMMANDS,
+  commandFromText,
   matchProduct,
   parseTemplate,
   templateFor,
@@ -19,7 +21,7 @@ import {
 } from "@/lib/telegram/templates";
 import { buildSalePolicies } from "@/server/sale-policies";
 import { callWorkflow, WorkflowError } from "@/server/workflow";
-import { answerCallback, editMessage, esc, sendMessage, setCommands, type TelegramMessage, type TelegramUpdate } from "./api";
+import { answerCallback, editMessage, esc, sendMessage, setupBotProfile, type TelegramMessage, type TelegramUpdate } from "./api";
 
 /** A confirmation button older than this no longer saves anything. */
 const SUBMISSION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -27,6 +29,7 @@ const SUBMISSION_TTL_MS = 24 * 60 * 60 * 1000;
 interface Actor {
   telegramUserId: number;
   profileId: string;
+  firstName: string | null;
 }
 
 type Submission = {
@@ -68,25 +71,50 @@ function allowedLogin(telegramUserId: number): string | null {
 async function resolveActor(telegramUserId: number): Promise<Actor | null> {
   const login = allowedLogin(telegramUserId);
   if (!login) return null;
-  const { data } = await createAdminClient().from("profiles").select("id, email").eq("role", "owner").eq("is_active", true);
+  const { data } = await createAdminClient().from("profiles").select("id, email, first_name").eq("role", "owner").eq("is_active", true);
   const owner = (data ?? []).find((p) => p.id === login || p.email.toLowerCase() === login);
-  return owner ? { telegramUserId, profileId: owner.id } : null;
+  return owner ? { telegramUserId, profileId: owner.id, firstName: owner.first_name ?? null } : null;
 }
 
 // ---------------------------------------------------------------------------
 // Texts
 // ---------------------------------------------------------------------------
 
-const HELP = [
-  "<b>ZZ CRM · vpis prek Telegrama</b>",
-  "",
-  "/novastranka – kontakt v <b>Zasebno bazo</b> (Klicni seznami)",
-  "/novapolica – nova stranka s podpisano polico",
-  "/dodajpolico – nova polica za obstoječo stranko (poišče jo po telefonu)",
-  "/produkti – seznam produktov",
-  "",
-  "Izberi ukaz, tapni predlogo (skopira se), izpolni in pošlji nazaj. Pred shranjevanjem dobiš povzetek in gumb ✅ Shrani.",
-].join("\n");
+const KEYBOARD = [
+  [KEYBOARD_BUTTONS[0].label, KEYBOARD_BUTTONS[1].label],
+  [KEYBOARD_BUTTONS[2].label],
+  [KEYBOARD_BUTTONS[3].label, KEYBOARD_BUTTONS[4].label],
+];
+
+function welcome(firstName: string | null, prefix = ""): string {
+  return [
+    prefix || `👋 Pozdravljen${firstName ? `, ${esc(firstName)}` : ""}!`,
+    "",
+    "Tukaj vpišeš stranke in police v CRM kar iz Telegrama.",
+    "",
+    "<b>Kako</b>",
+    "1. Spodaj tapni gumb (ali napiši ukaz).",
+    "2. Bot ti pošlje predlogo. Tapni nanjo, da se skopira.",
+    "3. Prilepi jo v polje za pisanje, izpolni podatke za dvopičjem in pošlji.",
+    "4. Preveri povzetek in pritisni <b>✅ Shrani</b>. Brez tega se nič ne zapiše.",
+    "",
+    "<b>Gumbi</b>",
+    "➕ <b>Nova stranka</b> – kontakt v »Zasebno bazo« (Klicni seznami, vidiš jo samo ti). Od tam ga kot običajno pretvoriš v termin.",
+    "📝 <b>Nova polica</b> – nova stranka, ki je že podpisala: stranka, polica in provizije naenkrat.",
+    "📎 <b>Polica obstoječi stranki</b> – dodatna polica za stranko, ki je že v CRM. Poiščem jo po telefonu.",
+    "📦 <b>Produkti</b> – seznam produktov.",
+    "❓ <b>Pomoč</b> – ta navodila.",
+    "",
+    "<b>Nasveti</b>",
+    "• Polja z * so obvezna, ostala lahko pustiš prazna.",
+    "• Telefon: 041 123 456 ali +386 41 123 456",
+    "• Datum police: 5.10.2026 (prazno = danes)",
+    "• Premija: 45,50 · Trajanje: 20",
+    "• Produkt: dovolj je del imena, npr. »bonus«.",
+    "• Opomba je zadnja in je lahko v več vrsticah.",
+    "• Če se zmotiš, pritisni ❌ Prekliči in pošlji znova.",
+  ].join("\n");
+}
 
 function publicOrigin(): string | null {
   const host = process.env.APP_PUBLIC_HOST || process.env.VERCEL_PROJECT_PRODUCTION_URL;
@@ -145,32 +173,32 @@ export async function handleUpdate(update: TelegramUpdate): Promise<void> {
   }
 
   const text = msg.text.trim();
-  if (text.startsWith("/")) return handleCommand(msg, text);
+  const cmd = commandFromText(text);
+  if (cmd) return handleCommand(actor, msg, cmd);
   const parsed = parseTemplate(text);
   if (parsed) return handleTemplate(actor, msg, parsed);
-  await sendMessage(msg.chat.id, `Ne razumem sporočila. Začni z ukazom.\n\n${HELP}`);
+  await sendMessage(msg.chat.id, welcome(actor.firstName, "🤔 Tega sporočila ne razumem. Takole gre:"), { keyboard: KEYBOARD });
 }
 
-async function handleCommand(msg: TelegramMessage, text: string) {
-  const cmd = text.slice(1).split(/[\s@]/)[0].toLowerCase();
+async function handleCommand(actor: Actor, msg: TelegramMessage, cmd: string) {
   if ((TELEGRAM_COMMANDS as string[]).includes(cmd)) {
     const c = cmd as TelegramCommand;
     const hint =
       c === "novastranka"
-        ? "Obvezno: ime, priimek, telefon."
+        ? "Polja z * so obvezna."
         : c === "novapolica"
-          ? "Obvezno: ime, priimek, telefon, produkt, premija, trajanje. Prazen datum = danes. Za produkt je dovolj del imena (/produkti)."
-          : "Stranko poiščem po telefonu. Prazen datum = danes. Za produkt je dovolj del imena (/produkti).";
+          ? "Polja z * so obvezna. Prazen datum = danes. Za produkt je dovolj del imena (📦 Produkti)."
+          : "Stranko poiščem po telefonu. Polja z * so obvezna. Prazen datum = danes. Za produkt je dovolj del imena (📦 Produkti).";
     await sendMessage(msg.chat.id, `<b>${esc(COMMAND_TITLES[c])}</b>\nTapni predlogo, da jo kopiraš, izpolni in pošlji:\n\n<pre>${esc(templateFor(c))}</pre>\n${esc(hint)}`);
     return;
   }
-  if (cmd === "start") await setCommands();
   if (cmd === "produkti") {
     const products = await activeProducts();
     await sendMessage(msg.chat.id, `<b>Produkti</b>\n${products.map((p) => `• ${esc(p.name)}`).join("\n") || "Ni aktivnih produktov."}`);
     return;
   }
-  await sendMessage(msg.chat.id, HELP);
+  if (cmd === "start") await setupBotProfile();
+  await sendMessage(msg.chat.id, welcome(actor.firstName), { keyboard: KEYBOARD });
 }
 
 async function activeProducts() {

@@ -50,7 +50,11 @@ export function esc(value: unknown): string {
   return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-export function sendMessage(chatId: number, html: string, opts: { replyTo?: number; buttons?: InlineButton[][] } = {}) {
+export function sendMessage(
+  chatId: number,
+  html: string,
+  opts: { replyTo?: number; buttons?: InlineButton[][]; keyboard?: string[][] } = {},
+) {
   return call("sendMessage", {
     chat_id: chatId,
     text: html,
@@ -58,6 +62,9 @@ export function sendMessage(chatId: number, html: string, opts: { replyTo?: numb
     link_preview_options: { is_disabled: true },
     ...(opts.replyTo ? { reply_parameters: { message_id: opts.replyTo, allow_sending_without_reply: true } } : {}),
     ...(opts.buttons ? { reply_markup: { inline_keyboard: opts.buttons } } : {}),
+    ...(opts.keyboard
+      ? { reply_markup: { keyboard: opts.keyboard.map((row) => row.map((text) => ({ text }))), resize_keyboard: true, is_persistent: true } }
+      : {}),
   });
 }
 
@@ -77,15 +84,22 @@ export function answerCallback(callbackId: string, text?: string) {
   return call("answerCallbackQuery", { callback_query_id: callbackId, ...(text ? { text } : {}) });
 }
 
-/** The command menu next to the message field (set on /start, so no manual setup is needed). */
-export function setCommands() {
-  return call("setMyCommands", {
-    commands: [
-      { command: "novastranka", description: "Kontakt v Zasebno bazo" },
-      { command: "novapolica", description: "Nova stranka s podpisano polico" },
-      { command: "dodajpolico", description: "Polica za obstoječo stranko" },
-      { command: "produkti", description: "Seznam produktov" },
-      { command: "pomoc", description: "Navodila" },
-    ],
-  });
+/** Command menu and the texts shown before/after "Start" (set on /start, so no manual setup is needed). */
+export async function setupBotProfile() {
+  await Promise.all([
+    call("setMyCommands", {
+      commands: [
+        { command: "novastranka", description: "Kontakt v Zasebno bazo" },
+        { command: "novapolica", description: "Nova stranka s podpisano polico" },
+        { command: "dodajpolico", description: "Polica za obstoječo stranko" },
+        { command: "produkti", description: "Seznam produktov" },
+        { command: "pomoc", description: "Navodila" },
+      ],
+    }),
+    call("setMyDescription", {
+      description:
+        "Vpis strank in polic v ZZ CRM kar iz Telegrama.\n\nPritisni Start: dobiš navodila in gumbe. Izbereš, kaj vpisuješ, izpolniš predlogo in potrdiš z ✅. Brez potrditve se nič ne zapiše.",
+    }),
+    call("setMyShortDescription", { short_description: "Vpis strank in polic v ZZ CRM" }),
+  ]);
 }

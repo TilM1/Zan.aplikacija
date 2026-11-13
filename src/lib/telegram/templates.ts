@@ -60,9 +60,32 @@ export const COMMAND_TITLES: Record<TelegramCommand, string> = {
   dodajpolico: "Nova polica za obstoječo stranko",
 };
 
-/** Template text to copy (header line + one "Label: " line per field). */
+const REQUIRED: Record<TelegramCommand, FieldKey[]> = {
+  novastranka: ["first_name", "last_name", "phone"],
+  novapolica: ["first_name", "last_name", "phone", "product", "monthly_premium", "duration_years"],
+  dodajpolico: ["phone", "product", "monthly_premium", "duration_years"],
+};
+
+/** Template text to copy (header line + one "Label: " line per field, * = required). */
 export function templateFor(command: TelegramCommand): string {
-  return [`#${command}`, ...FIELDS[command].map((k) => `${LABELS[k]}: `)].join("\n");
+  const req = new Set(REQUIRED[command]);
+  return [`#${command}`, ...FIELDS[command].map((k) => `${LABELS[k]}${req.has(k) ? "*" : ""}: `)].join("\n");
+}
+
+/** Buttons under the message field (reply keyboard). Tapping one sends its text. */
+export const KEYBOARD_BUTTONS: { label: string; command: string }[] = [
+  { label: "➕ Nova stranka", command: "novastranka" },
+  { label: "📝 Nova polica", command: "novapolica" },
+  { label: "📎 Polica obstoječi stranki", command: "dodajpolico" },
+  { label: "📦 Produkti", command: "produkti" },
+  { label: "❓ Pomoč", command: "pomoc" },
+];
+
+/** "/novastranka", "/novastranka@Bot" or a keyboard button label → command name; null otherwise. */
+export function commandFromText(text: string): string | null {
+  const t = text.trim();
+  if (t.startsWith("/")) return t.slice(1).split(/[\s@]/)[0].toLowerCase();
+  return KEYBOARD_BUTTONS.find((b) => b.label === t)?.command ?? null;
 }
 
 function normalizeKey(raw: string): string {

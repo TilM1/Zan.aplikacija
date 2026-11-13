@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchProduct, parseDate, parseTemplate, templateFor, validateTemplate } from "./templates";
+import { KEYBOARD_BUTTONS, commandFromText, matchProduct, parseDate, parseTemplate, templateFor, validateTemplate } from "./templates";
 
 const NOW = new Date("2026-11-13T10:00:00Z");
 
@@ -89,5 +89,20 @@ describe("matchProduct", () => {
     expect(matchProduct("bonus", products)).toEqual({ product: products[0] });
     expect(matchProduct("zivljenj", products)).toEqual({ candidates: [products[0], products[1]] });
     expect(matchProduct("avto", products)).toEqual({ candidates: products });
+  });
+});
+
+describe("commands and buttons", () => {
+  it("marks required fields with * and still parses them", () => {
+    expect(templateFor("novastranka").split("\n").slice(0, 5)).toEqual(["#novastranka", "Ime*: ", "Priimek*: ", "Telefon*: ", "E-pošta: "]);
+    const p = parseTemplate(templateFor("novastranka").replace("Ime*: ", "Ime*: Janez"));
+    expect(p?.fields.first_name).toBe("Janez");
+  });
+  it("maps slash commands and keyboard buttons", () => {
+    expect(commandFromText("/start")).toBe("start");
+    expect(commandFromText("/NovaStranka@ZZCrmBot")).toBe("novastranka");
+    for (const b of KEYBOARD_BUTTONS) expect(commandFromText(` ${b.label} `)).toBe(b.command);
+    expect(commandFromText("živjo")).toBeNull();
+    expect(commandFromText("#novastranka\nIme: X")).toBeNull();
   });
 });

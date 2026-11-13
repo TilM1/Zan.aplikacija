@@ -14,6 +14,7 @@ UI language: Slovenian. Code and docs: English.
 | Security measures & settings | [docs/SECURITY.md](docs/SECURITY.md) |
 | Backups, recovery, CSV/XLSX export | [docs/BACKUP_AND_RECOVERY.md](docs/BACKUP_AND_RECOVERY.md) |
 | Future Outlook calendar sync | [docs/OUTLOOK_INTEGRATION.md](docs/OUTLOOK_INTEGRATION.md) |
+| Telegram bot (vpis strank in polic) | [docs/TELEGRAM.md](docs/TELEGRAM.md) |
 
 ---
 

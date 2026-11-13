@@ -17,7 +17,8 @@
     "demo:cleanup": "tsx scripts/demo/apply.ts cleanup",
     "create-owner": "tsx scripts/create-owner.ts",
     "db:migrate": "tsx scripts/db/migrate.ts",
-    "db:wipe": "tsx scripts/db/wipe-all-data.ts"
+    "db:wipe": "tsx scripts/db/wipe-all-data.ts",
+    "telegram:setup": "tsx scripts/telegram/setup.ts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",

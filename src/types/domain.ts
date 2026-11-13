@@ -205,7 +205,7 @@ export interface LeadList {
   source_file_name: string | null;
   status: "importing" | "ready" | "archived";
   /** "live" lists are fed automatically (e.g. Google Sheet with ad leads). */
-  kind: "import" | "live";
+  kind: "import" | "live" | "private";
   source_label: string | null;
   source_tab: string | null;
   last_ingest_at: string | null;

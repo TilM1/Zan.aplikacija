@@ -92,7 +92,7 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
   const filters: FilterDef[] = [
     { key: "q", label: "Iskanje", type: "search", placeholder: "Naziv, telefon, e-pošta, davčna…" },
     ...(lists.length > 1
-      ? [{ key: "list", label: "Seznam (mapa)", type: "select", options: [{ value: "", label: "Vsi seznami" }, ...lists.filter((l) => kind === "all" || l.kind === kind).map((l) => ({ value: l.id, label: `${l.kind === "live" ? "LIVE · " : ""}${l.name}` }))] } as FilterDef]
+      ? [{ key: "list", label: "Seznam (mapa)", type: "select", options: [{ value: "", label: "Vsi seznami" }, ...lists.filter((l) => kind === "all" || l.kind === kind).map((l) => ({ value: l.id, label: `${l.kind === "live" ? "LIVE · " : l.kind === "private" ? "ZASEBNO · " : ""}${l.name}` }))] } as FilterDef]
       : []),
     { key: "city", label: "Kraj", type: "select", options: [{ value: "", label: "Vsi kraji" }, ...cities.map((c) => ({ value: c.city, label: `${c.city} (${c.n})` }))] },
     { key: "postal", label: "Poštna št.", type: "search", placeholder: "npr. 1000", className: "min-w-28 max-w-32 flex-none" },

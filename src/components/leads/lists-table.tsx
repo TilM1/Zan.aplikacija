@@ -69,7 +69,10 @@ export function ListsTable({
                       {l.name}
                     </a>
                     {l.kind === "live" && <span className="ml-1.5 rounded bg-ink px-1.5 text-[10px] font-bold tracking-wide text-gold">LIVE</span>}
-                    <span className="block text-[11px] text-ink-3">{l.kind === "live" ? `${l.source_label ?? "Google Sheets"} · zavihek ${l.source_tab ?? "–"}` : l.source_file_name}</span>
+                    {l.kind === "private" && <span className="ml-1.5 rounded bg-ink px-1.5 text-[10px] font-bold tracking-wide text-gold">ZASEBNO</span>}
+                    <span className="block text-[11px] text-ink-3">
+                      {l.kind === "live" ? `${l.source_label ?? "Google Sheets"} · zavihek ${l.source_tab ?? "–"}` : l.kind === "private" ? "Vnosi iz Telegrama · vidi samo lastnik" : l.source_file_name}
+                    </span>
                   </TD>
                   <TD className="text-xs whitespace-nowrap text-ink-2">
                     {l.kind === "live" ? (
@@ -88,7 +91,9 @@ export function ListsTable({
                     )}
                   </TD>
                   <TD>
-                    {membersOf(l.id).length === 0 ? (
+                    {l.kind === "private" ? (
+                      <span className="text-ink-3">Samo lastnik</span>
+                    ) : membersOf(l.id).length === 0 ? (
                       <span className="text-ink-3">Vse</span>
                     ) : (
                       membersOf(l.id).map((m) => (
@@ -202,10 +207,12 @@ function EditListDialog({ list, callers, members, onClose }: { list: LeadList; c
         <Field label="Ime seznama">
           <Input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} />
         </Field>
-        <div>
-          <p className="mb-1.5 text-[13px] font-semibold">Kdo kliče ta seznam{list.kind === "live" ? " in kdo dobi obvestilo" : ""}?</p>
-          <MembersPicker callers={callers} value={draft} onChange={setDraft} showNotify={list.kind === "live"} />
-        </div>
+        {list.kind !== "private" && (
+          <div>
+            <p className="mb-1.5 text-[13px] font-semibold">Kdo kliče ta seznam{list.kind === "live" ? " in kdo dobi obvestilo" : ""}?</p>
+            <MembersPicker callers={callers} value={draft} onChange={setDraft} showNotify={list.kind === "live"} />
+          </div>
+        )}
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" className="size-4 accent-ink" checked={v.archived} onChange={(e) => setV({ ...v, archived: e.target.checked })} />
           Arhiviraj (klicateljice seznama ne vidijo več, podatki ostanejo)

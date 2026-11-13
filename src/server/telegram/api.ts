@@ -76,3 +76,16 @@ export function editMessage(chatId: number, messageId: number, html: string) {
 export function answerCallback(callbackId: string, text?: string) {
   return call("answerCallbackQuery", { callback_query_id: callbackId, ...(text ? { text } : {}) });
 }
+
+/** The command menu next to the message field (set on /start, so no manual setup is needed). */
+export function setCommands() {
+  return call("setMyCommands", {
+    commands: [
+      { command: "novastranka", description: "Kontakt v Zasebno bazo" },
+      { command: "novapolica", description: "Nova stranka s podpisano polico" },
+      { command: "dodajpolico", description: "Polica za obstoječo stranko" },
+      { command: "produkti", description: "Seznam produktov" },
+      { command: "pomoc", description: "Navodila" },
+    ],
+  });
+}

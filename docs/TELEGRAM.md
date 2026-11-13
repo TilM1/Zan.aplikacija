@@ -48,29 +48,30 @@ Prazen datum police pomeni danes. Opomba je lahko v več vrsticah (mora biti zad
 ## Varnost
 
 - Pot `/api/telegram/webhook` sprejme samo zahteve s skrivnim žetonom (`TELEGRAM_WEBHOOK_SECRET`, Telegram ga pošlje v glavi `X-Telegram-Bot-Api-Secret-Token`).
-- Bot uporabljajo samo Telegram uporabniki iz `TELEGRAM_ALLOWED_USERS`, povezani z **aktivnim lastnikom** v CRM. Vse zapise še enkrat preverijo funkcije `crm_*` v bazi (`crm_require_owner`).
+- Bot uporabljajo samo Telegram uporabniki iz `TELEGRAM_ALLOWED_USERS`, povezani (prek e-pošte ali ID profila) z **aktivnim lastnikom** v CRM. Vse zapise še enkrat preverijo funkcije `crm_*` v bazi (`crm_require_owner`).
 - Vsako poslano predlogo zapiše tabela `telegram_submissions` (ena vrstica na sporočilo, stanje `pending → processing → done/failed/cancelled`). Dvojni pritisk na ✅ ali ponovno poslano sporočilo se zato shrani samo enkrat. Brskalnik do te tabele nima dostopa.
 - Brez `TELEGRAM_BOT_TOKEN` in `TELEGRAM_WEBHOOK_SECRET` vrne pot 404 in bot je izklopljen.
 - Bot naj bo v **zasebnem** klepetu. Skupine bot ignorira.
 
-## Namestitev (enkrat)
+## Namestitev (enkrat, brez terminala)
 
-1. **Bot:** v Telegramu odpri @BotFather → `/newbot` → ime in uporabniško ime (npr. `ZZPartnerjiCrmBot`). Shrani žeton. V BotFather nato `/setjoingroups` → Disable.
-2. **Migracija baze** (pred deployem kode): v `.env.local` nastavi `SUPABASE_DB_URL` za produkcijo, nato
-   `npm run db:migrate -- --dry` (pokaže samo `20261113120000_telegram_bot.sql`) in `npm run db:migrate`.
-   Migracija samo dodaja: nova tabela, dve novi funkciji, vrsta seznama `private`. Klicatelji zasebnih seznamov ne vidijo.
+1. **Bot:** v Telegramu @BotFather → `/newbot` → ime in uporabniško ime (konča se na `bot`). Shrani žeton. Nato `/setjoingroups` → Disable.
+2. **Baza (pred mergom):** Supabase (projekt CRM-ja) → SQL Editor → New query → prilepi celotno skripto za namestitev (vsebina `supabase/migrations/20261113120000_telegram_bot.sql`, ovita v transakcijo, ki migracijo tudi zabeleži v `supabase_migrations.schema_migrations`) → Run.
+   Alternativa s terminalom: `npm run db:migrate -- --dry` (izpiše samo to datoteko), nato `npm run db:migrate`.
 3. **Vercel → Settings → Environment Variables (Production):**
    - `TELEGRAM_BOT_TOKEN` = žeton iz BotFather
-   - `TELEGRAM_WEBHOOK_SECRET` = `openssl rand -hex 32`
-   - `TELEGRAM_ALLOWED_USERS` = `<Telegram ID>:<ID lastnikovega profila>` (ID profila: Supabase → tabela `profiles`, ali URL Zaposleni → lastnik)
+   - `TELEGRAM_WEBHOOK_SECRET` = poljuben naključen niz, 32–256 znakov, samo črke, številke, `_` in `-`
+   - `TELEGRAM_ALLOWED_USERS` = `<Telegram ID>:<e-pošta, s katero se Žan prijavlja v CRM>`, npr. `123456789:zan@zzpartnerji.si` (namesto e-pošte gre tudi ID profila)
    - po želji `APP_PUBLIC_HOST` = produkcijska domena (za povezave v odgovorih)
-   Nato **Redeploy**.
-4. **Telegram ID:** Žan botu pošlje karkoli. Bot odgovori »Ni dostopa« in izpiše njegov Telegram ID. Vpiši ga v `TELEGRAM_ALLOWED_USERS` in ponovno deployaj.
-5. **Webhook:** lokalno v `.env.local` vpiši isti `TELEGRAM_BOT_TOKEN` in `TELEGRAM_WEBHOOK_SECRET` in poženi
-   `npm run telegram:setup -- https://<produkcijska domena>`.
-   Domena mora biti produkcijska (ne `*.vercel.app` predogled, ki je za prijavo).
+4. **Merge PR** (ali Redeploy, če je koda že na `main`).
+5. **Webhook:** v brskalniku odpri (zamenjaj TOKEN, DOMENA, SECRET):
+   `https://api.telegram.org/botTOKEN/setWebhook?url=https://DOMENA/api/telegram/webhook&secret_token=SECRET&allowed_updates=["message","callback_query"]&drop_pending_updates=true`
+   Odgovor mora biti `{"ok":true,...,"description":"Webhook was set"}`. Domena mora biti produkcijska (ne `*.vercel.app` predogled).
+   Alternativa s terminalom: `npm run telegram:setup -- https://DOMENA`.
+6. Žan botu pošlje `/start`. Bot nastavi meni ukazov in izpiše navodila.
 
-Izklop: `npm run telegram:setup -- --off` ali odstrani env spremenljivke v Vercelu.
+Izklop: v brskalniku `https://api.telegram.org/botTOKEN/deleteWebhook` ali odstrani env spremenljivke v Vercelu.
+Stanje webhooka: `https://api.telegram.org/botTOKEN/getWebhookInfo` (polje `last_error_message`).
 
 ## Preizkus po namestitvi
 

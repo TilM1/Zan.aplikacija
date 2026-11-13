@@ -19,7 +19,7 @@ import {
 } from "@/lib/telegram/templates";
 import { buildSalePolicies } from "@/server/sale-policies";
 import { callWorkflow, WorkflowError } from "@/server/workflow";
-import { answerCallback, editMessage, esc, sendMessage, type TelegramMessage, type TelegramUpdate } from "./api";
+import { answerCallback, editMessage, esc, sendMessage, setCommands, type TelegramMessage, type TelegramUpdate } from "./api";
 
 /** A confirmation button older than this no longer saves anything. */
 const SUBMISSION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -49,22 +49,28 @@ type DodajPolicoPayload = DodajPolico & PolicyPayload & { customer_id: string; c
 // Who may use the bot
 // ---------------------------------------------------------------------------
 
-/** TELEGRAM_ALLOWED_USERS="<telegram user id>:<CRM profile uuid>,…" */
-function allowedProfileId(telegramUserId: number): string | null {
+/**
+ * TELEGRAM_ALLOWED_USERS="<telegram user id>:<CRM login e-mail or profile id>,…"
+ * e.g. "123456789:zan@zzpartnerji.si"
+ */
+function allowedLogin(telegramUserId: number): string | null {
   for (const pair of (process.env.TELEGRAM_ALLOWED_USERS ?? "").split(",")) {
-    const [tg, profile] = pair.split(":").map((s) => s.trim());
-    if (tg && profile && tg === String(telegramUserId)) return profile;
+    const i = pair.indexOf(":");
+    if (i < 0) continue;
+    const tg = pair.slice(0, i).trim();
+    const login = pair.slice(i + 1).trim().toLowerCase();
+    if (tg && login && tg === String(telegramUserId)) return login;
   }
   return null;
 }
 
-/** Only an active Owner profile listed in TELEGRAM_ALLOWED_USERS. The DB functions re-check this. */
+/** Only an active Owner listed in TELEGRAM_ALLOWED_USERS. The DB functions re-check this. */
 async function resolveActor(telegramUserId: number): Promise<Actor | null> {
-  const profileId = allowedProfileId(telegramUserId);
-  if (!profileId) return null;
-  const { data } = await createAdminClient().from("profiles").select("id, role, is_active").eq("id", profileId).maybeSingle();
-  if (!data || !data.is_active || data.role !== "owner") return null;
-  return { telegramUserId, profileId };
+  const login = allowedLogin(telegramUserId);
+  if (!login) return null;
+  const { data } = await createAdminClient().from("profiles").select("id, email").eq("role", "owner").eq("is_active", true);
+  const owner = (data ?? []).find((p) => p.id === login || p.email.toLowerCase() === login);
+  return owner ? { telegramUserId, profileId: owner.id } : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -158,6 +164,7 @@ async function handleCommand(msg: TelegramMessage, text: string) {
     await sendMessage(msg.chat.id, `<b>${esc(COMMAND_TITLES[c])}</b>\nTapni predlogo, da jo kopiraš, izpolni in pošlji:\n\n<pre>${esc(templateFor(c))}</pre>\n${esc(hint)}`);
     return;
   }
+  if (cmd === "start") await setCommands();
   if (cmd === "produkti") {
     const products = await activeProducts();
     await sendMessage(msg.chat.id, `<b>Produkti</b>\n${products.map((p) => `• ${esc(p.name)}`).join("\n") || "Ni aktivnih produktov."}`);
